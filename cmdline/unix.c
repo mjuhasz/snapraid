@@ -130,6 +130,204 @@ static int sysread(const char* path, char* buf, size_t buf_size)
 }
 #endif
 
+#if HAVE_LINUX_DEVICE
+/*
+ * sysread_vpd_pg83 — parse raw binary VPD page 0x83 (Device Identification)
+ * from a sysfs vpd_pg83 file and extract the first NAA (Network Address
+ * Authority) designator for the Logical Unit (ASSOCIATION == 0x00).
+ */
+static int sysattr_vpd_pg80(const char* path, char* dst, size_t dst_size)
+{
+	unsigned char buf[512];
+	int ret = sysread(path, (char*)buf, sizeof(buf));
+
+	/* need at least the header */
+	if (ret < 4)
+		return -1;
+
+	/* validate page code */
+	if (buf[1] != 0x80)
+		return -1;
+
+	/* clamp to what was actually read */
+	size_t page_len = buf[3];
+	size_t available = (size_t)ret - 4;
+	if (available < page_len)
+		page_len = available;
+
+	/* if empty */
+	if (page_len == 0)
+		return -1;
+
+	/* if too bit to store the 0 termination */
+	if (4 + page_len + 1 > sizeof(buf))
+		return -1;
+
+	char* attr = (char*)buf + 4;
+	attr[page_len] = 0;
+	strtrim(attr);
+
+	/* if empty */
+	if (!*attr)
+		return -1;
+
+	pathcpy(dst, dst_size, attr);
+	return 0;
+}
+#endif
+
+/*
+ * sysread_vpd_pg83 — parse raw binary VPD page 0x83 (Device Identification)
+ * from a sysfs vpd_pg83 file and extract the first NAA (Network Address
+ * Authority) designator for the Logical Unit (ASSOCIATION == 0x00).
+ *
+ * The result is written into dst as a lowercase hex string,
+ * e.g.: "5000c500abcdef01"   (8-byte / NAA type 1,2,3,5)
+ *       "6000c500abcdef010000000000000000"  (16-byte / NAA type 6)
+ *
+ * VPD page 0x83 wire format (SPC-4 §7.7.2)
+ *
+ *  Page header — 4 bytes:
+ *    [0]  peripheral qualifier (7:5) | device type (4:0)
+ *    [1]  page code  = 0x83
+ *    [2]  PAGE LENGTH MSB  }  16-bit big-endian: number of bytes that follow
+ *    [3]  PAGE LENGTH LSB  }  the header (i.e. total descriptor bytes)
+ *
+ *  Then a sequence of Designation Descriptors:
+ *    [+0]  PROTOCOL ID (7:4) | CODE SET (3:0)
+ *              0x1 = binary, 0x2 = ASCII, 0x3 = UTF-8
+ *    [+1]  PIV (7) | reserved (6) | ASSOCIATION (5:4) | DESIGNATOR TYPE (3:0)
+ *              ASSOCIATION:      0x0 = logical unit  ← we want only this
+ *                                0x1 = target port
+ *                                0x2 = target device
+ *              DESIGNATOR TYPE:  0x3 = NAA  ← we want only this
+ *    [+2]  reserved
+ *    [+3]  DESIGNATOR LENGTH = N  (bytes that follow in this descriptor)
+ *    [+4 … +4+N-1]  DESIGNATOR (binary for NAA)
+ *
+ * ── NAA subtypes (top nibble of designator byte 0) ───────────────────────
+ *
+ *    0x1  NAA IEEE Extended          →  8 bytes
+ *    0x2  NAA Locally Assigned       →  8 bytes
+ *    0x3  NAA IEEE Registered        →  8 bytes   (most common on SATA/SAS)
+ *    0x5  NAA IEEE Registered        →  8 bytes
+ *    0x6  NAA IEEE Registered Ext.   → 16 bytes
+ *    others: reserved
+ *
+ * The DESIGNATOR LENGTH from the descriptor header must agree with the
+ * expected length for the NAA subtype.  If they disagree, the descriptor
+ * is malformed and must be skipped.
+ *
+ * Returns 0 and fills dst on success, -1 if no valid NAA LU descriptor found.
+ */
+#if HAVE_LINUX_DEVICE
+static int sysattr_vpd_pg83(const char* path, char* dst, size_t dst_size)
+{
+	unsigned char buf[4096];
+
+	int ret = sysread(path, (char*)buf, sizeof(buf));
+	if (ret < 4)
+		return -1;
+
+	/* validate page code */
+	if (buf[1] != 0x83)
+		return -1;
+
+	size_t page_len = ((size_t)buf[2] << 8) | buf[3];
+
+	/* clamp to what was actually read */
+	size_t available = (size_t)ret - 4;
+	if (page_len > available)
+		page_len = available;
+
+	/* if empty */
+	if (page_len == 0)
+		return -1;
+
+	/*
+	 * Walk every Designation Descriptor looking for the first NAA descriptor
+	 * that is associated with the Logical Unit (ASSOCIATION == 0x00).
+	 *
+	 * We take the first one found rather than scoring: all NAA subtypes are
+	 * globally unique by construction; the first LU-associated NAA is the
+	 * canonical device WWN.
+	 */
+	size_t offset = 0;
+	while (offset + 4 <= page_len) {
+		const unsigned char* desc = buf + 4 + offset;
+
+		unsigned code_set = desc[0] & 0x0f;
+		unsigned assoc = (desc[1] >> 4) & 0x03;
+		unsigned dtype = desc[1] & 0x0f;
+		size_t id_len = desc[3];
+
+		/* bounds check: the full descriptor must lie within page_len */
+		if (offset + 4 + id_len > page_len)
+			break; /* malformed page — stop iterating */
+
+		/* skip anything that is not an LU-associated NAA descriptor */
+		if (assoc != 0x00 || dtype != 0x03)
+			goto next;
+
+		/*
+		 * NAA is always binary (CODE SET == 0x01).
+		 * Reject if the device mis-advertises it as ASCII (defensive).
+		 */
+		if (code_set != 0x01)
+			goto next;
+
+		/* if empty */
+		if (id_len == 0)
+			goto next;
+
+		/*
+		 * Validate NAA subtype vs. expected byte length.
+		 * The NAA value is the top nibble of the first byte of the
+		 * designator (NOT the descriptor header byte).
+		 */
+		unsigned naa = (desc[4] >> 4) & 0x0f;
+		size_t expected = 0;
+
+		switch (naa) {
+		case 0x1 : /* IEEE Extended */
+		case 0x2 : /* lLocally Assigned */
+		case 0x3 : /* IEEE Registered */
+		case 0x5 : /* IEEE Registered */
+			expected = 8;
+			break;
+		case 0x6 : /* IEEE Registered Extended */
+			expected = 16;
+			break;
+		default :
+			goto next;
+		}
+
+		/* DESIGNATOR LENGTH must match the NAA subtype exactly */
+		if (id_len != expected)
+			goto next;
+
+		/*
+		 * Format as "naa:<hex>".
+		 * Each byte → 2 hex digits; prefix "naa:" is 4 chars; +1 for NUL.
+		 * Maximum: "naa:" + 32 hex digits (16 bytes) + NUL = 37 bytes.
+		 */
+		if (dst_size < 4 + id_len * 2 + 1)
+			return -1;   /* caller's buffer too small */
+
+		for (size_t i = 0; i < id_len; i++)
+			snprintf(dst + i * 2, 3, "%02x", desc[4 + i]);
+		dst[4 + id_len * 2] = '\0';
+
+		return 0;
+
+next:
+		offset += 4 + id_len;
+	}
+
+	return -1;
+}
+#endif
+
 /**
  * Read a file from sys.
  * Trim spaces.
@@ -1604,18 +1802,10 @@ static void devattr(dev_t device, uint64_t* info, char* serial, char* family, ch
 	}
 
 	if (*serial == 0) {
-		// --- Page 0x80: Unit Serial Number ---
 		pathprint(path, sizeof(path), "/sys/dev/block/%u:%u/device/vpd_pg80", major(device), minor(device));
-		ret = sysread(path, buf, sizeof(buf));
-		if (ret > 4) {
-			unsigned len = (unsigned char)buf[3];
-			if (4 + len <= (size_t)ret && 4 + len + 1 <= sizeof(buf)) {
-				char* attr = buf + 4;
-				attr[len] = 0;
-				strtrim(attr);
-				if (*attr)
-					pathcpy(serial, SMART_MAX, attr);
-			}
+		if (sysattr_vpd_pg80(path, buf, sizeof(buf)) == 0) {
+			if (buf[0] != 0)
+				pathcpy(serial, SMART_MAX, buf);
 		}
 	}
 
@@ -2438,6 +2628,85 @@ int ambient_temperature(void)
 	return 0;
 }
 #endif
+
+int devmap(void)
+{
+#if HAVE_LINUX_DEVICE
+	char esc_buffer[ESC_MAX];
+	char path[PATH_MAX];
+	DIR* d = opendir("/sys/block");
+	if (!d)
+		return -1;
+
+	struct dirent* dd;
+	while (1) {
+		char buf[256];
+
+		dd = readdir(d);
+		if (dd == 0)
+			break;
+
+		if (dd->d_name[0] == '.')
+			continue;
+
+		/* verify it has a hardware device link (excludes virtual disks) */
+		pathprint(path, sizeof(path), "/sys/block/%s/device", dd->d_name);
+		if (access(path, F_OK) != 0)
+			continue;
+
+		/* device/serial */
+		pathprint(path, sizeof(path), "/sys/block/%s/device/serial", dd->d_name);
+		if (sysattr(path, buf, sizeof(buf)) == 0 && buf[0] != 0) {
+			log_tag("map:/dev/%s:%s\n", dd->d_name, esc_tag(buf, esc_buffer));
+		}
+
+		/* device/vpd_pg80 */
+		pathprint(path, sizeof(path), "/sys/block/%s/device/vpd_pg80", dd->d_name);
+		if (sysattr_vpd_pg80(path, buf, sizeof(buf)) == 0 && buf[0] != 0) {
+			log_tag("map:/dev/%s:%s\n", dd->d_name, esc_tag(buf, esc_buffer));
+		}
+
+		/* device/vpd_pg83 */
+		pathprint(path, sizeof(path), "/sys/block/%s/device/vpd_pg83", dd->d_name);
+		if (sysattr_vpd_pg83(path, buf, sizeof(buf)) == 0 && buf[0] != 0) {
+			log_tag("map:/dev/%s:naa.%s\n", dd->d_name, esc_tag(buf, esc_buffer));
+		}
+
+		/* device/WWN */
+		pathprint(path, sizeof(path), "/sys/block/%s/device/wwn", dd->d_name);
+		if (sysattr(path, buf, sizeof(buf)) == 0 && buf[0] != 0) {
+			log_tag("map:/dev/%s:%s\n", dd->d_name, esc_tag(buf, esc_buffer));
+		}
+
+		/* device/WWID */
+		pathprint(path, sizeof(path), "/sys/block/%s/device/wwid", dd->d_name);
+		if (sysattr(path, buf, sizeof(buf)) == 0 && buf[0] != 0) {
+			log_tag("map:/dev/%s:%s\n", dd->d_name, esc_tag(buf, esc_buffer));
+		}
+
+		/* WWN */
+		pathprint(path, sizeof(path), "/sys/block/%s/wwn", dd->d_name);
+		if (sysattr(path, buf, sizeof(buf)) == 0 && buf[0] != 0) {
+			log_tag("map:/dev/%s:%s\n", dd->d_name, esc_tag(buf, esc_buffer));
+		}
+
+		/* WWID */
+		pathprint(path, sizeof(path), "/sys/block/%s/wwid", dd->d_name);
+		if (sysattr(path, buf, sizeof(buf)) == 0 && buf[0] != 0) {
+			log_tag("map:/dev/%s:%s\n", dd->d_name, esc_tag(buf, esc_buffer));
+		}
+
+		/* uuid */
+		pathprint(path, sizeof(path), "/sys/block/%s/uuid", dd->d_name);
+		if (sysattr(path, buf, sizeof(buf)) == 0 && buf[0] != 0) {
+			log_tag("map:/dev/%s:%s\n", dd->d_name, esc_tag(buf, esc_buffer));
+		}
+	}
+
+	closedir(d);
+#endif
+	return 0;
+}
 
 #endif
 

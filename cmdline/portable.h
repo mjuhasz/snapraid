@@ -578,6 +578,11 @@ int devquery(tommy_list* high, tommy_list* low, int operation);
 int devtest(tommy_list* high, tommy_list* low, int operation);
 
 /**
+ * Query all the "low" devices and log their unique identifiers
+ */
+int devmap(void);
+
+/**
  * Get the ambient temperature in degree
  *
  * Return 0 if not available.

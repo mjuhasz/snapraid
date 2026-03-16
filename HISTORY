@@ -1,6 +1,10 @@
 SnapRAID HISTORY
 ================
 
+14.0rc3c 16/03/2026
+===================
+ * Log additional information to allow to handle dynamic devices associations
+
 14.0rc3 15/03/2026
 ==================
  * New 'extra' config option to define additional disks to monitor with the

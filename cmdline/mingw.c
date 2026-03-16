@@ -2534,7 +2534,6 @@ retry:
 	return 0;
 }
 
-
 static void devattr_property(HANDLE h, char* serial, char* model, char* inter)
 {
 	STORAGE_PROPERTY_QUERY query = { 0 };
@@ -2561,12 +2560,12 @@ static void devattr_property(HANDLE h, char* serial, char* model, char* inter)
 	STORAGE_DEVICE_DESCRIPTOR* desc = (STORAGE_DEVICE_DESCRIPTOR*)buffer;
 
 	/* extract strings (offsets are from start of descriptor) */
-	if (*model == 0 && desc->ProductIdOffset) {
+	if (model && *model == 0 && desc->ProductIdOffset) {
 		snprintf(model, SMART_MAX, "%s", (char*)(buffer + desc->ProductIdOffset));
 		strtrim(model);
 	}
 
-	if (*serial == 0 && desc->SerialNumberOffset) {
+	if (serial && *serial == 0 && desc->SerialNumberOffset) {
 		snprintf(serial, SMART_MAX, "%s", (char*)(buffer + desc->SerialNumberOffset));
 		strtrim(serial);
 	}
@@ -2604,7 +2603,7 @@ static void devattr_property(HANDLE h, char* serial, char* model, char* inter)
 	case BusTypeNvmeof : type = "NVMe"; break;
 	default :
 	}
-	if (type)
+	if (inter && type)
 		snprintf(inter, SMART_MAX, "%s", type);
 
 	free(buffer);
@@ -3147,6 +3146,33 @@ int devquery(tommy_list* high, tommy_list* low, int operation)
 		return 0;
 
 	return device_thread(low, func);
+}
+
+int devmap(void)
+{
+	for (int i = 0; i < 32; i++) {
+		char wfile[PATH_MAX];
+		wchar_t conv_buf[CONV_MAX];
+		pathprint(wfile, sizeof(wfile), "\\\\.\\PhysicalDrive%d", i);
+		HANDLE h;
+
+		/* open the volume */
+		h = CreateFileW(convert(conv_buf, wfile), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING | FILE_FLAG_WRITE_THROUGH, 0);
+		if (h == INVALID_HANDLE_VALUE)
+			continue;
+
+		char esc_buffer[ESC_MAX];
+		char serial[SMART_MAX];
+		serial[0] = 0;
+		devattr_property(h, serial, 0, 0);
+		if (serial[0]) {
+			log_tag("map:/dev/pd%d:%s\n", i, esc_tag(serial, esc_buffer));
+		}
+
+		CloseHandle(h);
+	}
+
+	return 0;
 }
 
 /****************************************************************************/

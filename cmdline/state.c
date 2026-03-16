@@ -138,6 +138,7 @@ void state_init(struct snapraid_state* state)
 	unsigned l, s, i;
 
 	memset(&state->opt, 0, sizeof(state->opt));
+	state->mapped_device = 0;
 	state->filter_hidden = 0;
 	state->autosave = 0;
 	state->need_write = 0;

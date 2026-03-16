@@ -125,6 +125,7 @@ struct snapraid_option {
 
 struct snapraid_state {
 	struct snapraid_option opt; /**< Setup options. */
+	int mapped_device; /**< Devices were already mapped */
 	int filter_hidden; /**< Filter out hidden files. */
 	uint64_t autosave; /**< Autosave after the specified amount of data. 0 to disable. */
 	int need_write; /**< If the state is changed. */

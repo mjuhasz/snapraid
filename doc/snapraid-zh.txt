@@ -13,10 +13,11 @@ snapraid [-c, --conf CONFIG]
 	[-p, --plan PERC|bad|new|full]
 	[-o, --older-than DAYS] [-l, --log FILE]
 	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	[-t, --tail]
 	[-Z, --force-zero] [-E, --force-empty]
 	[-U, --force-uuid] [-D, --force-device]
 	[-N, --force-nocopy] [-F, --force-full]
-	[-R, --force-realloc]
+	[-R, --force-realloc] [-W, --force-realloc-tail]
 	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	[-L, --error-limit NUMBER]
 	[-A, --stats]
@@ -479,11 +480,15 @@ Backblaze 提供的以下数据进行关联获得的：
     updated - 大小或时间戳不同的文件，表示它们已被修改。
     moved - 在同一磁盘上移动到不同目录的文件。
         它们通过具有相同的名称、大小、时间戳和 inode，但目录不同来识别。
-    copied - 在同一磁盘或不同磁盘上复制的文件。请注意，如果
-        它们确实移动到了不同的磁盘，它们也会被计入 `removed` 中。
-        它们通过具有相同的名称、大小和时间戳来识别。如果亚秒级时间戳为零，
-        则必须匹配完整路径，而不仅仅是名称。
-    restored - inode 不同但名称、大小和时间戳匹配的文件。
+    copied - 在相同或不同磁盘上复制的文件，且原始文件仍然存在。
+        它们通过具有相同的名称、大小和时间戳进行识别。
+        如果亚秒级时间戳为零，则必须完整路径匹配才能识别，而不仅仅是名
+        称。
+    relocated - 在相同或不同磁盘上移动的文件，且原始文件已消失。
+        它们通过具有相同的名称、大小和时间戳进行识别。
+        如果亚秒级时间戳为零，则必须完整路径匹配才能识别。
+        与同一磁盘上的 'moved' 文件不同，重定位的文件具有不同的 inode。
+    restored - inode 不同但目录、名称、大小和时间戳匹配的文件。
         这些通常是删除后恢复的文件。
 
 如果需要 `sync`，进程返回码为 2，而不是默认的 0。
@@ -1063,14 +1068,24 @@ DIR 是磁盘在文件系统中的挂载点。
 稍后重命名磁盘。
 在重命名的情况下，关联是使用存储的磁盘 UUID 完成的。
 
-7.6 nohidden
+7.6 extra NAME DIR
+------------------
+
+定义要通过 `smart` 和 `probe` 命令监控的额外磁盘的名称和挂载点。
+
+这对于监控不属于阵列但系统运行所必需的磁盘（例如启动盘）非常有用。
+
+请注意，此类磁盘不受 `up` 和 `down` 命令的影响，因为它们被预期始终处于
+旋转状态。
+
+7.7 nohidden
 ------------
 
 排除所有隐藏文件和目录。
 在 Unix 中，隐藏文件是以 `.` 开头的文件。
 在 Windows 中，它们是具有隐藏属性的文件。
 
-7.7 exclude/include PATTERN
+7.8 exclude/include PATTERN
 ---------------------------
 
 定义要从同步过程中排除或包含的文件或目录模式。
@@ -1085,7 +1100,7 @@ DIR 是磁盘在文件系统中的挂载点。
 
 此选项可以多次使用。
 
-7.8 blocksize SIZE_IN_KIBIBYTES
+7.9 blocksize SIZE_IN_KIBIBYTES
 -------------------------------
 
 定义奇偶校验的基本块大小（以 KiB 为单位）。
@@ -1129,8 +1144,8 @@ DIR 是磁盘在文件系统中的挂载点。
 这会导致大约 1.5% 的额外空间，对于 4 TB 磁盘约为 60 GB，
 这允许每个数据磁盘上大约 460,000 个文件而不会浪费任何空间。
 
-7.9 hashsize SIZE_IN_BYTES
---------------------------
+7.10 hashsize SIZE_IN_BYTES
+---------------------------
 
 定义保存块的散列大小（以字节为单位）。
 
@@ -1164,14 +1179,14 @@ RAM = $(8 * 4 * 10^{12}) * (1+16) / (512 * 2^{10}) = 0.96$ GiB
 
 RAM = $(8 * 4 * 10^{12}) * (1+8) / (512 * 2^{10}) = 0.51$ GiB
 
-7.10 autosave SIZE_IN_GIGABYTES
+7.11 autosave SIZE_IN_GIGABYTES
 -------------------------------
 
 在同步或 scrub 之后，处理指定数量的 GB 后，自动保存状态。
 此选项有助于避免在机器崩溃或任何其他事件中断时，
 从头开始重新启动长时间的 `sync` 命令。
 
-7.11 temp_limit TEMPERATURE_CELSIUS
+7.12 temp_limit TEMPERATURE_CELSIUS
 -----------------------------------
 
 设置允许的最高磁盘温度（摄氏度）。指定后，
@@ -1199,13 +1214,13 @@ SnapRAID 运行时会显示当前磁盘温度。
 通常，SnapRAID 只显示最热磁盘的温度。
 要显示所有磁盘的温度，请使用 -A 或 --stats 选项。
 
-7.12 temp_sleep TIME_IN_MINUTES
+7.13 temp_sleep TIME_IN_MINUTES
 -------------------------------
 
 设置达到温度限制时的待机时间（以分钟为单位）。
 在此期间，磁盘保持停转状态。默认值为 5 分钟。
 
-7.13 pool DIR
+7.14 pool DIR
 -------------
 
 定义 `pooling` 目录，其中使用 `pool` 命令创建磁盘
@@ -1213,7 +1228,7 @@ SnapRAID 运行时会显示当前磁盘温度。
 
 目录必须已经存在。
 
-7.14 share UNC_DIR
+7.15 share UNC_DIR
 ------------------
 
 定义远程访问磁盘所需的 Windows UNC 路径。
@@ -1228,7 +1243,7 @@ SnapRAID 运行时会显示当前磁盘温度。
 
 此选项仅在 Windows 中需要。
 
-7.15 smartctl DISK/PARITY OPTIONS...
+7.16 smartctl DISK/PARITY OPTIONS...
 ------------------------------------
 
 定义自定义 smartctl 选项以获取每个磁盘的 SMART 属性。
@@ -1253,7 +1268,7 @@ PARITY 是奇偶校验名称之一：`parity`、`2-parity`、`3-parity`、
 
     smartctl parity -d sat %s
 
-7.16 smartignore DISK/PARITY ATTR [ATTR...]
+7.17 smartignore DISK/PARITY ATTR [ATTR...]
 -------------------------------------------
 
 在计算磁盘故障概率时忽略指定的 SMART 属性。
@@ -1272,7 +1287,7 @@ PARITY 是奇偶校验名称之一：`parity`、`2-parity`、`3-parity`、
 
     smartignore parity 197
 
-7.17 Examples
+7.18 Examples
 -------------
 
 Unix 的典型配置示例如下：

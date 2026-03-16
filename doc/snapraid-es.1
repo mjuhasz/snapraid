@@ -30,6 +30,10 @@ snapraid [\-c, \-\-conf CONFIG]
 .PD 0
 .PP
 .PD
+	[\-t, \-\-tail]
+.PD 0
+.PP
+.PD
 	[\-Z, \-\-force\-zero] [\-E, \-\-force\-empty]
 .PD 0
 .PP
@@ -42,7 +46,7 @@ snapraid [\-c, \-\-conf CONFIG]
 .PD 0
 .PP
 .PD
-	[\-R, \-\-force\-realloc]
+	[\-R, \-\-force\-realloc] [\-W, \-\-force\-realloc\-tail]
 .PD 0
 .PP
 .PD
@@ -808,18 +812,28 @@ disco. Se identifican por tener el mismo nombre, tamaño,
 marca de tiempo e inodo, pero un directorio diferente.
 .HP 4
 .I copied
-Archivos copiados en el mismo o un disco diferente.
-Tenga en cuenta que si realmente se mueven a un disco
-diferente, también se contarán en \`removed\`.
+Archivos copiados en el mismo disco o en uno diferente
+donde el archivo original todavía existe.
 Se identifican por tener el mismo nombre, tamaño y
-marca de tiempo. Si la marca de tiempo de subsegundo es
-cero, la ruta completa debe coincidir, no solo el nombre.
+marca de tiempo.
+Si la marca de tiempo de subsegundo es cero, la ruta
+completa debe coincidir para ser identificado, no solo el nombre.
+.HP 4
+.I relocated
+Archivos movidos en el mismo disco o en uno
+diferente donde el original ha desaparecido.
+Se identifican por tener el mismo nombre, tamaño y
+marca de tiempo.
+Si la marca de tiempo de subsegundo es cero, la ruta
+completa debe coincidir para ser identificado.
+A diferencia de los archivos \`moved\` en el mismo disco,
+los archivos reubicados tienen un inodo diferente.
 .HP 4
 .I restored
-Archivos con un inodo diferente pero que coinciden
-en nombre, tamaño y marca de tiempo.
-Estos suelen ser archivos restaurados después de ser
-eliminados.
+Archivos con un inodo diferente pero con directorio,
+nombre, tamaño y marca de tiempo coincidentes.
+Estos son usualmente archivos restaurados después de
+haber sido eliminados.
 .PD
 .RE
 .PP
@@ -1459,6 +1473,16 @@ Puede cambiar el nombre de un disco más tarde cambiando el NAME
 directamente en el archivo de configuración y luego ejecutando un
 comando \`sync\`. En el caso de cambiar el nombre, la asociación se
 realiza utilizando el UUID almacenado de los discos.
+.SS extra NAME DIR 
+Define el nombre y el punto de montaje de discos adicionales para monitorear
+con los comandos \`smart\` y \`probe\`.
+.PP
+Esto es útil para monitorear discos que no forman parte de la
+matriz pero que son necesarios para que el sistema funcione, como
+el disco de arranque.
+.PP
+Tenga en cuenta que dichos discos no se ven afectados por los comandos \`up\` y \`down\`
+porque se espera que estén siempre girando.
 .SS nohidden 
 Excluye todos los archivos y directorios ocultos.
 En Unix, los archivos ocultos son los que comienzan con \`.\`.

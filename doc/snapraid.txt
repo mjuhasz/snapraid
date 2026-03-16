@@ -1219,7 +1219,8 @@ This is useful for monitoring disks that are not part of the
 array but are required for the system to function, such as
 the boot disk.
 
-Note that such disks are not affected by the `up` and `down` commands.
+Note that such disks are not affected by the `up` and `down` commands
+because they are expected to be always spinning.
 
 7.7 nohidden
 ------------

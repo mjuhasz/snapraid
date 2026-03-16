@@ -9,10 +9,11 @@ Synopsis
 	:	[-p, --plan PERC|bad|new|full]
 	:	[-o, --older-than DAYS] [-l, --log FILE]
 	:	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	:	[-t, --tail]
 	:	[-Z, --force-zero] [-E, --force-empty]
 	:	[-U, --force-uuid] [-D, --force-device]
 	:	[-N, --force-nocopy] [-F, --force-full]
-	:	[-R, --force-realloc]
+	:	[-R, --force-realloc] [-W, --force-realloc-tail]
 	:	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	:	[-L, --error-limit NUMBER]
 	:	[-A, --stats]
@@ -523,16 +524,24 @@ Commands
 		moved - Archivos movidos a un directorio diferente en el mismo
 			disco. Se identifican por tener el mismo nombre, tamaño,
 			marca de tiempo e inodo, pero un directorio diferente.
-		copied - Archivos copiados en el mismo o un disco diferente.
-			Tenga en cuenta que si realmente se mueven a un disco
-			diferente, también se contarán en `removed`.
+		copied - Archivos copiados en el mismo disco o en uno diferente
+			donde el archivo original todavía existe.
 			Se identifican por tener el mismo nombre, tamaño y
-			marca de tiempo. Si la marca de tiempo de subsegundo es
-			cero, la ruta completa debe coincidir, no solo el nombre.
-		restored - Archivos con un inodo diferente pero que coinciden
-			en nombre, tamaño y marca de tiempo.
-			Estos suelen ser archivos restaurados después de ser
-			eliminados.
+			marca de tiempo.
+			Si la marca de tiempo de subsegundo es cero, la ruta
+			completa debe coincidir para ser identificado, no solo el nombre.
+		relocated - Archivos movidos en el mismo disco o en uno
+			diferente donde el original ha desaparecido.
+			Se identifican por tener el mismo nombre, tamaño y
+			marca de tiempo.
+			Si la marca de tiempo de subsegundo es cero, la ruta
+			completa debe coincidir para ser identificado.
+			A diferencia de los archivos `moved` en el mismo disco,
+			los archivos reubicados tienen un inodo diferente.
+		restored - Archivos con un inodo diferente pero con directorio,
+			nombre, tamaño y marca de tiempo coincidentes.
+			Estos son usualmente archivos restaurados después de
+			haber sido eliminados.
 
 	Si se requiere un `sync`, el código de retorno del proceso es 2, en
 	lugar del valor predeterminado 0. El código de retorno 1 se utiliza
@@ -1182,6 +1191,17 @@ Configuration
 	directamente en el archivo de configuración y luego ejecutando un
 	comando `sync`. En el caso de cambiar el nombre, la asociación se
 	realiza utilizando el UUID almacenado de los discos.
+
+  extra NAME DIR
+	Define el nombre y el punto de montaje de discos adicionales para monitorear
+	con los comandos `smart` y `probe`.
+
+	Esto es útil para monitorear discos que no forman parte de la
+	matriz pero que son necesarios para que el sistema funcione, como
+	el disco de arranque.
+
+	Tenga en cuenta que dichos discos no se ven afectados por los comandos `up` y `down`
+	porque se espera que estén siempre girando.
 
   nohidden
 	Excluye todos los archivos y directorios ocultos.

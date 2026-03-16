@@ -13,10 +13,11 @@ snapraid [-c, --conf CONFIG]
 	[-p, --plan PERC|bad|new|full]
 	[-o, --older-than DAYS] [-l, --log FILE]
 	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	[-t, --tail]
 	[-Z, --force-zero] [-E, --force-empty]
 	[-U, --force-uuid] [-D, --force-device]
 	[-N, --force-nocopy] [-F, --force-full]
-	[-R, --force-realloc]
+	[-R, --force-realloc] [-W, --force-realloc-tail]
 	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	[-L, --error-limit NUMBER]
 	[-A, --stats]
@@ -540,13 +541,22 @@ grupperade efter:
     moved - Filer flyttade till en annan katalog på samma disk.
         De identifieras genom att ha samma namn, storlek, tidsstämpel
         och inode, men en annan katalog.
-    copied - Filer kopierade på samma eller en annan disk. Observera att om
-        de verkligen flyttas till en annan disk, kommer de också att
-        räknas i `removed`.
+    copied - Filer som kopierats på samma eller en annan disk där
+        originalfilen fortfarande finns kvar.
         De identifieras genom att ha samma namn, storlek och
-        tidsstämpel. Om undertidsstämpeln är noll,
-        måste hela sökvägen matcha, inte bara namnet.
-    restored - Filer med en annan inode men matchande namn, storlek och tidsstämpel.
+        tidsstämpel.
+        Om tidsstämpeln för undersekunder är noll måste hela sökvägen
+        matcha för att identifieras, inte bara namnet.
+    relocated - Filer som flyttats på samma eller en annan disk där
+        originalet har försvunnit.
+        De identifieras genom att ha samma namn, storlek och
+        tidsstämpel.
+        Om tidsstämpeln för undersekunder är noll måste hela sökvägen
+        matcha för att identifieras.
+        Till skillnad från 'moved' filer på samma disk har omlokaliserade
+        filer en annan inode.
+    restored - Filer med en annan inode men matchande katalog, namn,
+        storlek och tidsstämpel.
         Dessa är vanligtvis filer som återställts efter att ha raderats.
 
 Om en `sync` krävs är processens returkod 2, istället för standard 0.
@@ -1201,14 +1211,27 @@ i konfigurationsfilen och sedan köra ett `sync`-kommando.
 I händelse av namnbyte görs associationen med hjälp av den lagrade
 UUID:n för diskarna.
 
-7.6 nohidden
+7.6 extra NAME DIR
+------------------
+
+Definierar namn och monteringspunkt för ytterligare diskar som ska
+övervakas med kommandona `smart` och `probe`.
+
+Detta är användbart för att övervaka diskar som inte ingår i arrayen
+men som krävs för att systemet ska fungera, till exempel
+startdisken.
+
+Observera att sådana diskar inte påverkas av kommandona `up` och
+`down` eftersom de förväntas alltid snurra.
+
+7.7 nohidden
 ------------
 
 Exkluderar alla dolda filer och kataloger.
 I Unix är dolda filer de som börjar med `.`.
 I Windows är de de med det dolda attributet.
 
-7.7 exclude/include MÖNSTER
+7.8 exclude/include MÖNSTER
 ---------------------------
 
 Definierar fil- eller katalogmönstren att exkludera eller inkludera
@@ -1226,7 +1249,7 @@ specifikationer.
 
 Detta alternativ kan användas flera gånger.
 
-7.8 blocksize STORLEK_I_KIBIBYTES
+7.9 blocksize STORLEK_I_KIBIBYTES
 ---------------------------------
 
 Definierar den grundläggande blockstorleken i kibibytes för pariteten.
@@ -1274,8 +1297,8 @@ Detta resulterar i cirka 1,5% extra utrymme, ungefär 60 GB för
 en 4 TB-disk, vilket möjliggör cirka 460 000 filer på varje datadisk utan
 något bortkastat utrymme.
 
-7.9 hashsize STORLEK_I_BYTE
----------------------------
+7.10 hashsize STORLEK_I_BYTE
+----------------------------
 
 Definierar hash-storleken i byte för de sparade blocken.
 
@@ -1312,7 +1335,7 @@ Om du byter till både en hash-storlek på 8 och en blockstorlek på 512 får du
 
 RAM = (8 * 4 * 10^12) * (1+8) / (512 * 2^10) = 0,51 GiB
 
-7.10 autosave STORLEK_I_GIGABYTES
+7.11 autosave STORLEK_I_GIGABYTES
 ---------------------------------
 
 Sparar automatiskt tillståndet vid synkronisering eller skrubbning efter att den
@@ -1320,7 +1343,7 @@ specificerade mängden GB har behandlats.
 Detta alternativ är användbart för att undvika att starta om långa `sync`-
 kommandon från början om de avbryts av en maskinkrasch eller någon annan händelse.
 
-7.11 temp_limit TEMPERATUR_CELSIUS
+7.12 temp_limit TEMPERATUR_CELSIUS
 ----------------------------------
 
 Anger den maximalt tillåtna disk-temperaturen i Celsius. När den specificeras,
@@ -1351,14 +1374,14 @@ temperaturen som mättes vid start av körningen som en reservreferens.
 Normalt visar SnapRAID endast temperaturen på den hetaste disken.
 För att visa temperaturen på alla diskar, använd alternativet -A eller --stats.
 
-7.12 temp_sleep TID_I_MINUTER
+7.13 temp_sleep TID_I_MINUTER
 -----------------------------
 
 Anger standby-tiden, i minuter, när temperaturgränsen har
 nåtts. Under denna period förblir diskarna nedsnurrade. Standard
 är 5 minuter.
 
-7.13 pool KATALOG
+7.14 pool KATALOG
 -----------------
 
 Definierar poolningskatalogen där den virtuella vyn av disk-
@@ -1366,7 +1389,7 @@ arrayen skapas med hjälp av kommandot `pool`.
 
 Katalogen måste redan existera.
 
-7.14 share UNC_KATALOG
+7.15 share UNC_KATALOG
 ----------------------
 
 Definierar Windows UNC-sökvägen som krävs för att få åtkomst till diskarna på distans.
@@ -1382,7 +1405,7 @@ katalog och namn.
 
 Detta alternativ krävs endast för Windows.
 
-7.15 smartctl DISK/PARITY ALTERNATIV...
+7.16 smartctl DISK/PARITY ALTERNATIV...
 ---------------------------------------
 
 Definierar anpassade smartctl-alternativ för att få SMART-attributen för
@@ -1407,7 +1430,7 @@ Till exempel:
 
     smartctl parity -d sat %s
 
-7.16 smartignore DISK/PARITY ATTR [ATTR...]
+7.17 smartignore DISK/PARITY ATTR [ATTR...]
 -------------------------------------------
 
 Ignorerar det specificerade SMART-attributet vid beräkning av sannolikheten
@@ -1428,7 +1451,7 @@ För att ignorera det endast på den första paritetsdisken:
 
     smartignore parity 197
 
-7.17 Exempel
+7.18 Exempel
 ------------
 
 Ett exempel på en typisk konfiguration för Unix är:

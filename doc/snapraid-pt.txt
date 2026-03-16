@@ -13,10 +13,11 @@ snapraid [-c, --conf CONFIG]
 	[-p, --plan PERC|bad|new|full]
 	[-o, --older-than DAYS] [-l, --log FILE]
 	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	[-t, --tail]
 	[-Z, --force-zero] [-E, --force-empty]
 	[-U, --force-uuid] [-D, --force-device]
 	[-N, --force-nocopy] [-F, --force-full]
-	[-R, --force-realloc]
+	[-R, --force-realloc] [-W, --force-realloc-tail]
 	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	[-L, --error-limit NUMBER]
 	[-A, --stats]
@@ -547,16 +548,24 @@ apresentado, agrupado por:
     moved - Arquivos movidos para um diretório diferente no mesmo disco.
         Eles são identificados por terem o mesmo nome, tamanho,
         carimbo de data/hora e inode, mas um diretório diferente.
-    copied - Arquivos copiados no mesmo ou em um disco diferente.
-        Observe que se eles forem realmente movidos para um disco
-        diferente, eles também serão contados em `removed`.
+    copied - Arquivos copiados no mesmo disco ou em um disco
+        diferente onde o arquivo original ainda existe.
         Eles são identificados por terem o mesmo nome, tamanho e
-        carimbo de data/hora. Se o carimbo de data/hora sub-segundo
-        for zero, o caminho completo deve corresponder, não apenas
+        carimbo de data/hora.
+        Se o carimbo de data/hora de subsegundos for zero, o caminho
+        completo deve corresponder para ser identificado, não apenas
         o nome.
-    restored - Arquivos com um inode diferente, mas nome, tamanho e carimbo
-        de data/hora correspondentes. Estes são geralmente arquivos
-        restaurados após terem sido excluídos.
+    relocated - Arquivos movidos no mesmo disco ou em um disco
+        diferente onde o original desapareceu.
+        Eles são identificados por terem o mesmo nome, tamanho e
+        carimbo de data/hora.
+        Se o carimbo de data/hora de subsegundos for zero, o caminho
+        completo deve corresponder para ser identificado.
+        Ao contrário dos arquivos 'moved' no mesmo disco, os arquivos
+        realocados têm um inode diferente.
+    restored - Arquivos com um inode diferente, mas com diretório,
+        nome, tamanho e carimbo de data/hora correspondentes.
+        Geralmente são arquivos restaurados após serem excluídos.
 
 Se uma `sync` for necessária, o código de retorno do processo é 2,
 em vez do padrão 0. O código de retorno 1 é usado para uma condição
@@ -1230,14 +1239,27 @@ no arquivo de configuração e, em seguida, executando um comando `sync`.
 No caso de renomeação, a associação é feita usando o UUID
 armazenado dos discos.
 
-7.6 nohidden
+7.6 extra NAME DIR
+------------------
+
+Define o nome e o ponto de montagem de discos adicionais para
+monitorar com os comandos `smart` e `probe`.
+
+Isso é útil para monitorar discos que não fazem parte da matriz,
+mas que são necessários para o funcionamento do sistema, como o
+disco de inicialização.
+
+Observe que tais discos não são afetados pelos comandos `up` e `down`
+porque se espera que estejam sempre girando.
+
+7.7 nohidden
 ------------
 
 Exclui todos os arquivos e diretórios ocultos.
 No Unix, arquivos ocultos são aqueles que começam com `.`.
 No Windows, são aqueles com o atributo oculto.
 
-7.7 exclude/include PATTERN
+7.8 exclude/include PATTERN
 ---------------------------
 
 Define os padrões de arquivo ou diretório a serem excluídos ou incluídos
@@ -1255,7 +1277,7 @@ especificações de padrão.
 
 Esta opção pode ser usada várias vezes.
 
-7.8 blocksize SIZE_IN_KIBIBYTES
+7.9 blocksize SIZE_IN_KIBIBYTES
 -------------------------------
 
 Define o tamanho básico do bloco em kibibytes para a paridade.
@@ -1305,8 +1327,8 @@ Isso resulta em cerca de 1,5% de espaço extra, aproximadamente 60 GB para
 um disco de 4 TB, o que permite cerca de 460.000 arquivos em cada disco
 de dados sem qualquer espaço desperdiçado.
 
-7.9 hashsize SIZE_IN_BYTES
---------------------------
+7.10 hashsize SIZE_IN_BYTES
+---------------------------
 
 Define o tamanho do hash em bytes para os blocos salvos.
 
@@ -1343,7 +1365,7 @@ Mudando para um tamanho de hash de 8 e um tamanho de bloco de 512, você obtém:
 
 RAM = (8 * 4 * 10^12) * (1+8) / (512 * 2^10) = 0.51 GiB
 
-7.10 autosave SIZE_IN_GIGABYTES
+7.11 autosave SIZE_IN_GIGABYTES
 -------------------------------
 
 Salva automaticamente o estado ao sincronizar ou examinar após a
@@ -1351,7 +1373,7 @@ quantidade especificada de GB processados.
 Esta opção é útil para evitar reiniciar longos comandos `sync`
 do zero se interrompidos por uma falha de máquina ou qualquer outro evento.
 
-7.11 temp_limit TEMPERATURE_CELSIUS
+7.12 temp_limit TEMPERATURE_CELSIUS
 -----------------------------------
 
 Define a temperatura máxima permitida do disco em Celsius. Quando especificado,
@@ -1384,14 +1406,14 @@ referência de fallback.
 Normalmente, o SnapRAID mostra apenas a temperatura do disco mais quente.
 Para exibir a temperatura de todos os discos, use a opção -A ou --stats.
 
-7.12 temp_sleep TIME_IN_MINUTES
+7.13 temp_sleep TIME_IN_MINUTES
 -------------------------------
 
 Define o tempo de espera (standby time), em minutos, quando o limite de
 temperatura é atingido. Durante este período, os discos permanecem
 desligados. O padrão é 5 minutos.
 
-7.13 pool DIR
+7.14 pool DIR
 -------------
 
 Define o diretório de pooling onde a visualização virtual do array
@@ -1399,7 +1421,7 @@ de discos é criada usando o comando `pool`.
 
 O diretório já deve existir.
 
-7.14 share UNC_DIR
+7.15 share UNC_DIR
 ------------------
 
 Define o caminho UNC do Windows necessário para acessar os discos remotamente.
@@ -1415,7 +1437,7 @@ e finalmente adicionando o diretório e nome do arquivo.
 
 Esta opção é necessária apenas para Windows.
 
-7.15 smartctl DISK/PARITY OPTIONS...
+7.16 smartctl DISK/PARITY OPTIONS...
 ------------------------------------
 
 Define opções smartctl personalizadas para obter os atributos SMART para
@@ -1441,7 +1463,7 @@ Por exemplo:
 
     smartctl parity -d sat %s
 
-7.16 smartignore DISK/PARITY ATTR [ATTR...]
+7.17 smartignore DISK/PARITY ATTR [ATTR...]
 -------------------------------------------
 
 Ignora o atributo SMART especificado ao calcular a probabilidade
@@ -1462,7 +1484,7 @@ Para ignorá-lo apenas no primeiro disco de paridade:
 
     smartignore parity 197
 
-7.17 Exemplos
+7.18 Exemplos
 -------------
 
 Um exemplo de uma configuração típica para Unix é:

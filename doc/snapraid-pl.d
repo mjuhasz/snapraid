@@ -9,10 +9,11 @@ Synopsis
 	:	[-p, --plan PERC|bad|new|full]
 	:	[-o, --older-than DAYS] [-l, --log FILE]
 	:	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	:	[-t, --tail]
 	:	[-Z, --force-zero] [-E, --force-empty]
 	:	[-U, --force-uuid] [-D, --force-device]
 	:	[-N, --force-nocopy] [-F, --force-full]
-	:	[-R, --force-realloc]
+	:	[-R, --force-realloc] [-W, --force-realloc-tail]
 	:	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	:	[-L, --error-limit NUMBER]
 	:	[-A, --stats]
@@ -501,14 +502,24 @@ Commands
 		moved - Pliki przeniesione do innego katalogu na tym samym dysku.
 			Są one identyfikowane przez tę samą nazwę, rozmiar, znacznik czasu
 			i inode, ale inny katalog.
-		copied - Pliki skopiowane na tym samym lub innym dysku. Zauważ, że jeśli
-			zostały faktycznie przeniesione na inny dysk, zostaną również
-			policzone w `removed`.
-			Są one identyfikowane przez tę samą nazwę, rozmiar i
-			znacznik czasu. Jeśli znacznik czasu z dokładnością do podsekundy wynosi zero,
-			musi pasować pełna ścieżka, a nie tylko nazwa.
-		restored - Pliki o innym inode, ale pasującej nazwie, rozmiarze i znaczniku czasu.
-			Są to zazwyczaj pliki przywrócone po usunięciu.
+		copied - Pliki skopiowane na ten sam lub inny dysk, gdzie
+			oryginalny plik nadal istnieje.
+			Są one identyfikowane przez posiadanie tej samej nazwy, rozmiaru
+			i znacznika czasu.
+			Jeśli podsekundowy znacznik czasu wynosi zero, pełna ścieżka
+			musi być zgodna, aby plik został zidentyfikowany, a nie
+			tylko nazwa.
+		relocated - Pliki przeniesione na ten sam lub inny dysk, gdzie
+			oryginał zniknął.
+			Są one identyfikowane przez posiadanie tej samej nazwy, rozmiaru
+			i znacznika czasu.
+			Jeśli podsekundowy znacznik czasu wynosi zero, pełna ścieżka
+			musi być zgodna, aby plik został zidentyfikowany.
+			W przeciwieństwie do plików 'moved' na tym samym dysku, pliki
+			relokowane mają inny i-węzeł.
+		restored - Pliki o innym i-węźle, ale pasującym katalogu,
+			nazwie, rozmiarze i znaczniku czasu.
+			Są to zazwyczaj pliki przywrócone po ich usunięciu.
 
 	Jeśli wymagana jest `sync`, kod powrotu procesu wynosi 2, zamiast
 	domyślnego 0. Kod powrotu 1 jest używany dla ogólnego stanu błędu.
@@ -1123,6 +1134,17 @@ Configuration
 	w pliku konfiguracyjnym, a następnie uruchamiając polecenie `sync`.
 	W przypadku zmiany nazwy, skojarzenie odbywa się za pomocą zapisanego
 	UUID dysków.
+
+  extra NAME DIR
+	Definiuje nazwę i punkt montowania dodatkowych dysków do
+	monitorowania za pomocą poleceń `smart` oraz `probe`.
+
+	Jest to przydatne do monitorowania dysków, które nie są częścią
+	macierzy, ale są wymagane do funkcjonowania systemu, takich jak
+	dysk rozruchowy.
+
+	Należy zauważyć, że polecenia `up` i `down` nie mają wpływu na takie
+	dyski, ponieważ oczekuje się, że będą one zawsze w ruchu.
 
   nohidden
 	Wyklucza wszystkie ukryte pliki i katalogi.

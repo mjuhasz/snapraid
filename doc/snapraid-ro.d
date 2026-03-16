@@ -9,10 +9,11 @@ Sintaxă
 	:	[-p, --plan PERC|bad|new|full]
 	:	[-o, --older-than DAYS] [-l, --log FILE]
 	:	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	:	[-t, --tail]
 	:	[-Z, --force-zero] [-E, --force-empty]
 	:	[-U, --force-uuid] [-D, --force-device]
 	:	[-N, --force-nocopy] [-F, --force-full]
-	:	[-R, --force-realloc]
+	:	[-R, --force-realloc] [-W, --force-realloc-tail]
 	:	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	:	[-L, --error-limit NUMBER]
 	:	[-A, --stats]
@@ -497,13 +498,23 @@ Comenzi
 		moved - Fișiere mutate într-un director diferit pe același disc.
 			Sunt identificate având același nume, dimensiune, marcă temporală
 			și inod, dar un director diferit.
-		copied - Fișiere copiate pe același disc sau pe un disc diferit. Rețineți că dacă
-			sunt mutate cu adevărat pe un alt disc, vor fi, de asemenea,
-			numărate în `removed`.
-			Sunt identificate având același nume, dimensiune și
-			marcă temporală. Dacă marca temporală sub-secundă este zero,
-			întreaga cale trebuie să se potrivească, nu doar numele.
-		restored - Fișiere cu un inod diferit, dar nume, dimensiune și marcă temporală care se potrivesc.
+		copied - Fișiere copiate pe același disc sau pe un disc diferit
+			unde fișierul original încă există.
+			Acestea sunt identificate prin faptul că au același nume,
+			dimensiune și amprentă temporală.
+			Dacă amprenta temporală sub-secundă este zero, calea completă
+			trebuie să se potrivească pentru a fi identificate, nu doar
+			numele.
+		relocated - Fișiere mutate pe același disc sau pe un disc diferit
+			unde originalul a dispărut.
+			Acestea sunt identificate prin faptul că au același nume,
+			dimensiune și amprentă temporală.
+			Dacă amprenta temporală sub-secundă este zero, calea completă
+			trebuie să se potrivească pentru a fi identificate.
+			Spre deosebire de fișierele 'moved' de pe același disc, fișierele
+			relocate au un inod diferit.
+		restored - Fișiere cu un inod diferit, dar care se potrivesc ca
+			director, nume, dimensiune și amprentă temporală.
 			Acestea sunt de obicei fișiere restaurate după ce au fost șterse.
 
 	Dacă este necesară o `sync`, codul de retur al procesului este 2, în loc de
@@ -1123,6 +1134,17 @@ Configurare
 	în fișierul de configurare și apoi rulând o comandă `sync`.
 	În cazul redenumirii, asocierea se face utilizând UUID-ul stocat
 	al discurilor.
+
+  extra NAME DIR
+	Definește numele și punctul de montare al discurilor suplimentare
+	care vor fi monitorizate cu comenzile `smart` și `probe`.
+
+	Acest lucru este util pentru monitorizarea discurilor care nu fac
+	parte din matrice, dar sunt necesare pentru funcționarea
+	sistemului, cum ar fi discul de pornire.
+
+	Rețineți că astfel de discuri nu sunt afectate de comenzile `up` și
+	`down` deoarece se așteaptă ca acestea să se rotească mereu.
 
   nohidden
 	Exclude toate fișierele și directoarele ascunse.

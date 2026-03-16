@@ -30,6 +30,10 @@ snapraid [\-c, \-\-conf CONFIG]
 .PD 0
 .PP
 .PD
+	[\-t, \-\-tail]
+.PD 0
+.PP
+.PD
 	[\-Z, \-\-force\-zero] [\-E, \-\-force\-empty]
 .PD 0
 .PP
@@ -42,7 +46,7 @@ snapraid [\-c, \-\-conf CONFIG]
 .PD 0
 .PP
 .PD
-	[\-R, \-\-force\-realloc]
+	[\-R, \-\-force\-realloc] [\-W, \-\-force\-realloc\-tail]
 .PD 0
 .PP
 .PD
@@ -786,16 +790,28 @@ Są one identyfikowane przez tę samą nazwę, rozmiar, znacznik czasu
 i inode, ale inny katalog.
 .HP 4
 .I copied
-Pliki skopiowane na tym samym lub innym dysku. Zauważ, że jeśli
-zostały faktycznie przeniesione na inny dysk, zostaną również
-policzone w \`removed\`.
-Są one identyfikowane przez tę samą nazwę, rozmiar i
-znacznik czasu. Jeśli znacznik czasu z dokładnością do podsekundy wynosi zero,
-musi pasować pełna ścieżka, a nie tylko nazwa.
+Pliki skopiowane na ten sam lub inny dysk, gdzie
+oryginalny plik nadal istnieje.
+Są one identyfikowane przez posiadanie tej samej nazwy, rozmiaru
+i znacznika czasu.
+Jeśli podsekundowy znacznik czasu wynosi zero, pełna ścieżka
+musi być zgodna, aby plik został zidentyfikowany, a nie
+tylko nazwa.
+.HP 4
+.I relocated
+Pliki przeniesione na ten sam lub inny dysk, gdzie
+oryginał zniknął.
+Są one identyfikowane przez posiadanie tej samej nazwy, rozmiaru
+i znacznika czasu.
+Jeśli podsekundowy znacznik czasu wynosi zero, pełna ścieżka
+musi być zgodna, aby plik został zidentyfikowany.
+W przeciwieństwie do plików \'moved\' na tym samym dysku, pliki
+relokowane mają inny i\-węzeł.
 .HP 4
 .I restored
-Pliki o innym inode, ale pasującej nazwie, rozmiarze i znaczniku czasu.
-Są to zazwyczaj pliki przywrócone po usunięciu.
+Pliki o innym i\-węźle, ale pasującym katalogu,
+nazwie, rozmiarze i znaczniku czasu.
+Są to zazwyczaj pliki przywrócone po ich usunięciu.
 .PD
 .RE
 .PP
@@ -1400,6 +1416,16 @@ Możesz później zmienić nazwę dysku, zmieniając bezpośrednio nazwę NAME
 w pliku konfiguracyjnym, a następnie uruchamiając polecenie \`sync\`.
 W przypadku zmiany nazwy, skojarzenie odbywa się za pomocą zapisanego
 UUID dysków.
+.SS extra NAME DIR 
+Definiuje nazwę i punkt montowania dodatkowych dysków do
+monitorowania za pomocą poleceń \`smart\` oraz \`probe\`.
+.PP
+Jest to przydatne do monitorowania dysków, które nie są częścią
+macierzy, ale są wymagane do funkcjonowania systemu, takich jak
+dysk rozruchowy.
+.PP
+Należy zauważyć, że polecenia \`up\` i \`down\` nie mają wpływu na takie
+dyski, ponieważ oczekuje się, że będą one zawsze w ruchu.
 .SS nohidden 
 Wyklucza wszystkie ukryte pliki i katalogi.
 W systemie Unix ukryte pliki to te zaczynające się od \`.\`.

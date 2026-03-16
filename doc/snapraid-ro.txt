@@ -13,10 +13,11 @@ snapraid [-c, --conf CONFIG]
 	[-p, --plan PERC|bad|new|full]
 	[-o, --older-than DAYS] [-l, --log FILE]
 	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	[-t, --tail]
 	[-Z, --force-zero] [-E, --force-empty]
 	[-U, --force-uuid] [-D, --force-device]
 	[-N, --force-nocopy] [-F, --force-full]
-	[-R, --force-realloc]
+	[-R, --force-realloc] [-W, --force-realloc-tail]
 	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	[-L, --error-limit NUMBER]
 	[-A, --stats]
@@ -533,13 +534,23 @@ grupate după:
     moved - Fișiere mutate într-un director diferit pe același disc.
         Sunt identificate având același nume, dimensiune, marcă temporală
         și inod, dar un director diferit.
-    copied - Fișiere copiate pe același disc sau pe un disc diferit. Rețineți că dacă
-        sunt mutate cu adevărat pe un alt disc, vor fi, de asemenea,
-        numărate în `removed`.
-        Sunt identificate având același nume, dimensiune și
-        marcă temporală. Dacă marca temporală sub-secundă este zero,
-        întreaga cale trebuie să se potrivească, nu doar numele.
-    restored - Fișiere cu un inod diferit, dar nume, dimensiune și marcă temporală care se potrivesc.
+    copied - Fișiere copiate pe același disc sau pe un disc diferit
+        unde fișierul original încă există.
+        Acestea sunt identificate prin faptul că au același nume,
+        dimensiune și amprentă temporală.
+        Dacă amprenta temporală sub-secundă este zero, calea completă
+        trebuie să se potrivească pentru a fi identificate, nu doar
+        numele.
+    relocated - Fișiere mutate pe același disc sau pe un disc diferit
+        unde originalul a dispărut.
+        Acestea sunt identificate prin faptul că au același nume,
+        dimensiune și amprentă temporală.
+        Dacă amprenta temporală sub-secundă este zero, calea completă
+        trebuie să se potrivească pentru a fi identificate.
+        Spre deosebire de fișierele 'moved' de pe același disc, fișierele
+        relocate au un inod diferit.
+    restored - Fișiere cu un inod diferit, dar care se potrivesc ca
+        director, nume, dimensiune și amprentă temporală.
         Acestea sunt de obicei fișiere restaurate după ce au fost șterse.
 
 Dacă este necesară o `sync`, codul de retur al procesului este 2, în loc de
@@ -1198,14 +1209,27 @@ Puteți redenumi un disc mai târziu schimbând NAME direct
 În cazul redenumirii, asocierea se face utilizând UUID-ul stocat
 al discurilor.
 
-7.6 nohidden
+7.6 extra NAME DIR
+------------------
+
+Definește numele și punctul de montare al discurilor suplimentare
+care vor fi monitorizate cu comenzile `smart` și `probe`.
+
+Acest lucru este util pentru monitorizarea discurilor care nu fac
+parte din matrice, dar sunt necesare pentru funcționarea
+sistemului, cum ar fi discul de pornire.
+
+Rețineți că astfel de discuri nu sunt afectate de comenzile `up` și
+`down` deoarece se așteaptă ca acestea să se rotească mereu.
+
+7.7 nohidden
 ------------
 
 Exclude toate fișierele și directoarele ascunse.
 În Unix, fișierele ascunse sunt cele care încep cu `.`.
 În Windows, sunt cele cu atributul ascuns.
 
-7.7 exclude/include PATTERN
+7.8 exclude/include PATTERN
 ---------------------------
 
 Definește modelele de fișiere sau directoare de exclus sau inclus
@@ -1223,7 +1247,7 @@ specificațiile modelului.
 
 Această opțiune poate fi utilizată de mai multe ori.
 
-7.8 blocksize SIZE_IN_KIBIBYTES
+7.9 blocksize SIZE_IN_KIBIBYTES
 -------------------------------
 
 Definește dimensiunea de bază a blocului în kibibytes pentru paritate.
@@ -1271,8 +1295,8 @@ Acest lucru duce la aproximativ 1,5% spațiu suplimentar, aproximativ 60 GB pent
 un disc de 4 TB, ceea ce permite aproximativ 460.000 de fișiere pe fiecare disc de date fără
 niciun spațiu irosit.
 
-7.9 hashsize SIZE_IN_BYTES
---------------------------
+7.10 hashsize SIZE_IN_BYTES
+---------------------------
 
 Definește dimensiunea hash-ului în octeți pentru blocurile salvate.
 
@@ -1309,7 +1333,7 @@ Trecând la ambele, o dimensiune de hash de 8 și o dimensiune de bloc de 512, o
 
 RAM = (8 * 4 * 10^12) * (1+8) / (512 * 2^10) = 0,51 GiB
 
-7.10 autosave SIZE_IN_GIGABYTES
+7.11 autosave SIZE_IN_GIGABYTES
 -------------------------------
 
 Salvează automat starea la sincronizare sau verificare după
@@ -1317,7 +1341,7 @@ cantitatea specificată de GB procesați.
 Această opțiune este utilă pentru a evita repornirea comenzilor `sync` lungi
 de la zero dacă sunt întrerupte de o cădere a mașinii sau de orice alt eveniment.
 
-7.11 temp_limit TEMPERATURE_CELSIUS
+7.12 temp_limit TEMPERATURE_CELSIUS
 -----------------------------------
 
 Setează temperatura maximă permisă a discului în Celsius. Când este specificată,
@@ -1348,14 +1372,14 @@ cea mai scăzută temperatură a discului măsurată la începutul rulării ca r
 În mod normal, SnapRAID arată doar temperatura celui mai fierbinte disc.
 Pentru a afișa temperatura tuturor discurilor, utilizați opțiunea -A sau --stats.
 
-7.12 temp_sleep TIME_IN_MINUTES
+7.13 temp_sleep TIME_IN_MINUTES
 -------------------------------
 
 Setează timpul de așteptare (standby), în minute, când limita de temperatură este
 atinsă. În această perioadă, discurile rămân oprite. Valoarea implicită
 este 5 minute.
 
-7.13 pool DIR
+7.14 pool DIR
 -------------
 
 Definește directorul de pooling unde este creată vizualizarea virtuală a matricei
@@ -1363,7 +1387,7 @@ de discuri utilizând comanda `pool`.
 
 Directorul trebuie să existe deja.
 
-7.14 share UNC_DIR
+7.15 share UNC_DIR
 ------------------
 
 Definește calea UNC Windows necesară pentru a accesa discurile de la distanță.
@@ -1379,7 +1403,7 @@ directorul și numele fișierului.
 
 Această opțiune este necesară doar pentru Windows.
 
-7.15 smartctl DISK/PARITY OPTIONS...
+7.16 smartctl DISK/PARITY OPTIONS...
 ------------------------------------
 
 Definește opțiuni smartctl personalizate pentru a obține atributele SMART pentru
@@ -1404,7 +1428,7 @@ De exemplu:
 
     smartctl parity -d sat %s
 
-7.16 smartignore DISK/PARITY ATTR [ATTR...]
+7.17 smartignore DISK/PARITY ATTR [ATTR...]
 -------------------------------------------
 
 Ignoră atributul SMART specificat la calcularea probabilității
@@ -1425,7 +1449,7 @@ Pentru a-l ignora doar pe primul disc de paritate:
 
     smartignore parity 197
 
-7.17 Exemple
+7.18 Exemple
 ------------
 
 Un exemplu de configurare tipică pentru Unix este:

@@ -30,6 +30,10 @@ snapraid [\-c, \-\-conf CONFIG]
 .PD 0
 .PP
 .PD
+	[\-t, \-\-tail]
+.PD 0
+.PP
+.PD
 	[\-Z, \-\-force\-zero] [\-E, \-\-force\-empty]
 .PD 0
 .PP
@@ -42,7 +46,7 @@ snapraid [\-c, \-\-conf CONFIG]
 .PD 0
 .PP
 .PD
-	[\-R, \-\-force\-realloc]
+	[\-R, \-\-force\-realloc] [\-W, \-\-force\-realloc\-tail]
 .PD 0
 .PP
 .PD
@@ -837,18 +841,29 @@ dieselbe Größe, denselben Zeitstempel und dieselbe Inode,
 aber ein anderes Verzeichnis identifiziert.
 .HP 4
 .I copied
-Auf dieselbe oder eine andere Festplatte kopierte
-Dateien. Beachten Sie, dass wenn sie tatsächlich auf eine
-andere Festplatte verschoben werden, sie auch unter \`removed\`
-gezählt werden. Sie werden durch denselben Namen, dieselbe
-Größe und denselben Zeitstempel identifiziert. Wenn der
-Untersekunden\-Zeitstempel Null ist, muss der vollständige
-Pfad übereinstimmen, nicht nur der Name.
+Dateien, die auf dieselbe oder eine andere Festplatte
+kopiert wurden, wobei die Originaldatei noch vorhanden ist.
+Sie werden dadurch identifiziert, dass sie denselben Namen,
+dieselbe Größe und denselben Zeitstempel haben.
+Wenn der Subsekunden\-Zeitstempel Null ist, muss der vollständige
+Pfad übereinstimmen, um identifiziert zu werden, nicht nur
+der Name.
+.HP 4
+.I relocated
+Dateien, die auf dieselbe oder eine andere Festplatte
+verschoben wurden, wobei das Original verschwunden ist.
+Sie werden dadurch identifiziert, dass sie denselben Namen,
+dieselbe Größe und denselben Zeitstempel haben.
+Wenn der Subsekunden\-Zeitstempel Null ist, muss der vollständige
+Pfad übereinstimmen, um identifiziert zu werden.
+Im Gegensatz zu \'moved\' Dateien auf derselben Festplatte haben
+verschobene Dateien einen anderen Inode.
 .HP 4
 .I restored
-Dateien mit einer anderen Inode, aber übereinstimmendem
-Namen, Größe und Zeitstempel. Dies sind normalerweise
-Dateien, die nach dem Löschen wiederhergestellt wurden.
+Dateien mit einem anderen Inode, aber passendem
+Verzeichnis, Namen, Größe und Zeitstempel.
+Dies sind in der Regel Dateien, die nach dem Löschen
+wiederhergestellt wurden.
 .PD
 .RE
 .PP
@@ -1509,6 +1524,16 @@ Sie können eine Festplatte später umbenennen, indem Sie den NAME
 direkt in der Konfigurationsdatei ändern und dann einen \`sync\`\-Befehl
 ausführen. Im Falle einer Umbenennung erfolgt die Zuordnung
 mithilfe der gespeicherten UUID der Festplatten.
+.SS extra NAME DIR 
+Definiert den Namen und Einhängepunkt zusätzlicher Festplatten, die mit den
+Befehlen \`smart\` und \`probe\` überwacht werden sollen.
+.PP
+Dies ist nützlich für die Überwachung von Festplatten, die nicht Teil des
+Arrays sind, aber für das Funktionieren des Systems erforderlich sind, wie
+z. B. die Boot\-Festplatte.
+.PP
+Beachten Sie, dass solche Festplatten nicht von den Befehlen \`up\` und \`down\`
+betroffen sind, da von ihnen erwartet wird, dass sie sich immer drehen.
 .SS nohidden 
 Schließt alle versteckten Dateien und Verzeichnisse aus.
 Unter Unix sind versteckte Dateien solche, die mit \`.\` beginnen.

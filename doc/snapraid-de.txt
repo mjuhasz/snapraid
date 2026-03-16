@@ -13,10 +13,11 @@ snapraid [-c, --conf CONFIG]
 	[-p, --plan PERC|bad|new|full]
 	[-o, --older-than DAYS] [-l, --log FILE]
 	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	[-t, --tail]
 	[-Z, --force-zero] [-E, --force-empty]
 	[-U, --force-uuid] [-D, --force-device]
 	[-N, --force-nocopy] [-F, --force-full]
-	[-R, --force-realloc]
+	[-R, --force-realloc] [-W, --force-realloc-tail]
 	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	[-L, --error-limit NUMBER]
 	[-A, --stats]
@@ -588,16 +589,25 @@ der Änderungen präsentiert, gruppiert nach:
         verschobene Dateien. Sie werden durch denselben Namen,
         dieselbe Größe, denselben Zeitstempel und dieselbe Inode,
         aber ein anderes Verzeichnis identifiziert.
-    copied - Auf dieselbe oder eine andere Festplatte kopierte
-        Dateien. Beachten Sie, dass wenn sie tatsächlich auf eine
-        andere Festplatte verschoben werden, sie auch unter `removed`
-        gezählt werden. Sie werden durch denselben Namen, dieselbe
-        Größe und denselben Zeitstempel identifiziert. Wenn der
-        Untersekunden-Zeitstempel Null ist, muss der vollständige
-        Pfad übereinstimmen, nicht nur der Name.
-    restored - Dateien mit einer anderen Inode, aber übereinstimmendem
-        Namen, Größe und Zeitstempel. Dies sind normalerweise
-        Dateien, die nach dem Löschen wiederhergestellt wurden.
+    copied - Dateien, die auf dieselbe oder eine andere Festplatte
+        kopiert wurden, wobei die Originaldatei noch vorhanden ist.
+        Sie werden dadurch identifiziert, dass sie denselben Namen,
+        dieselbe Größe und denselben Zeitstempel haben.
+        Wenn der Subsekunden-Zeitstempel Null ist, muss der vollständige
+        Pfad übereinstimmen, um identifiziert zu werden, nicht nur
+        der Name.
+    relocated - Dateien, die auf dieselbe oder eine andere Festplatte
+        verschoben wurden, wobei das Original verschwunden ist.
+        Sie werden dadurch identifiziert, dass sie denselben Namen,
+        dieselbe Größe und denselben Zeitstempel haben.
+        Wenn der Subsekunden-Zeitstempel Null ist, muss der vollständige
+        Pfad übereinstimmen, um identifiziert zu werden.
+        Im Gegensatz zu 'moved' Dateien auf derselben Festplatte haben
+        verschobene Dateien einen anderen Inode.
+    restored - Dateien mit einem anderen Inode, aber passendem
+        Verzeichnis, Namen, Größe und Zeitstempel.
+        Dies sind in der Regel Dateien, die nach dem Löschen
+        wiederhergestellt wurden.
 
 Wenn ein `sync` erforderlich ist, ist der Rückgabecode des Prozesses 2
 anstelle des Standardwerts 0. Der Rückgabecode 1 wird für eine
@@ -1296,14 +1306,27 @@ direkt in der Konfigurationsdatei ändern und dann einen `sync`-Befehl
 ausführen. Im Falle einer Umbenennung erfolgt die Zuordnung
 mithilfe der gespeicherten UUID der Festplatten.
 
-7.6 nohidden
+7.6 extra NAME DIR
+------------------
+
+Definiert den Namen und Einhängepunkt zusätzlicher Festplatten, die mit den
+Befehlen `smart` und `probe` überwacht werden sollen.
+
+Dies ist nützlich für die Überwachung von Festplatten, die nicht Teil des
+Arrays sind, aber für das Funktionieren des Systems erforderlich sind, wie
+z. B. die Boot-Festplatte.
+
+Beachten Sie, dass solche Festplatten nicht von den Befehlen `up` und `down`
+betroffen sind, da von ihnen erwartet wird, dass sie sich immer drehen.
+
+7.7 nohidden
 ------------
 
 Schließt alle versteckten Dateien und Verzeichnisse aus.
 Unter Unix sind versteckte Dateien solche, die mit `.` beginnen.
 Unter Windows sind es solche mit dem versteckten Attribut.
 
-7.7 exclude/include PATTERN
+7.8 exclude/include PATTERN
 ---------------------------
 
 Definiert die Datei- oder Verzeichnismuster, die im `sync`-Vorgang
@@ -1322,7 +1345,7 @@ PATTERN.
 
 Diese Option kann mehrmals verwendet werden.
 
-7.8 blocksize SIZE_IN_KIBIBYTES
+7.9 blocksize SIZE_IN_KIBIBYTES
 -------------------------------
 
 Definiert die grundlegende Blockgröße in Kibibytes für die Parität.
@@ -1376,8 +1399,8 @@ Dies führt zu etwa 1,5% zusätzlichem Speicherplatz, ungefähr 60 GB
 für eine 4 TB Festplatte, was etwa 460.000 Dateien auf jeder
 Datenfestplatte ohne verschwendeten Platz ermöglicht.
 
-7.9 hashsize SIZE_IN_BYTES
---------------------------
+7.10 hashsize SIZE_IN_BYTES
+---------------------------
 
 Definiert die Hash-Größe in Bytes für die gespeicherten Blöcke.
 
@@ -1415,7 +1438,7 @@ von 512 erhalten Sie:
 
 RAM = (8 * 4 * 10^12) * (1+8) / (512 * 2^10) = 0.51 GiB
 
-7.10 autosave SIZE_IN_GIGABYTES
+7.11 autosave SIZE_IN_GIGABYTES
 -------------------------------
 
 Speichert den Zustand beim Synchronisieren oder Scrubben automatisch
@@ -1424,7 +1447,7 @@ Diese Option ist nützlich, um zu vermeiden, dass lange `sync`-Befehle
 von vorne gestartet werden müssen, wenn sie durch einen Maschinenabsturz
 oder ein anderes Ereignis unterbrochen werden.
 
-7.11 temp_limit TEMPERATURE_CELSIUS
+7.12 temp_limit TEMPERATURE_CELSIUS
 -----------------------------------
 
 Legt die maximal zulässige Festplattentemperatur in Celsius fest.
@@ -1460,14 +1483,14 @@ Normalerweise zeigt SnapRAID nur die Temperatur der heißesten
 Festplatte an. Um die Temperatur aller Festplatten anzuzeigen,
 verwenden Sie die Option -A oder --stats.
 
-7.12 temp_sleep TIME_IN_MINUTES
+7.13 temp_sleep TIME_IN_MINUTES
 -------------------------------
 
 Legt die Standby-Zeit in Minuten fest, wenn der Temperaturgrenzwert
 erreicht wird. Während dieser Zeit bleiben die Festplatten heruntergefahren.
 Der Standardwert ist 5 Minuten.
 
-7.13 pool DIR
+7.14 pool DIR
 -------------
 
 Definiert das Pooling-Verzeichnis, in dem die virtuelle Ansicht des
@@ -1475,7 +1498,7 @@ Festplatten-Arrays mithilfe des Befehls `pool` erstellt wird.
 
 Das Verzeichnis muss bereits existieren.
 
-7.14 share UNC_DIR
+7.15 share UNC_DIR
 ------------------
 
 Definiert den Windows UNC-Pfad, der für den Remote-Zugriff auf die
@@ -1493,7 +1516,7 @@ und schließlich das Dateiverzeichnis und der Name hinzugefügt werden.
 
 Diese Option ist nur für Windows erforderlich.
 
-7.15 smartctl DISK/PARITY OPTIONS...
+7.16 smartctl DISK/PARITY OPTIONS...
 ------------------------------------
 
 Definiert benutzerdefinierte smartctl-Optionen, um die SMART-Attribute
@@ -1519,7 +1542,7 @@ Zum Beispiel:
 
     smartctl parity -d sat %s
 
-7.16 smartignore DISK/PARITY ATTR [ATTR...]
+7.17 smartignore DISK/PARITY ATTR [ATTR...]
 -------------------------------------------
 
 Ignoriert das angegebene SMART-Attribut bei der Berechnung der
@@ -1542,7 +1565,7 @@ Um es nur auf der ersten Paritätsfestplatte zu ignorieren:
 
     smartignore parity 197
 
-7.17 Examples
+7.18 Examples
 -------------
 
 Ein Beispiel für eine typische Konfiguration für Unix ist:

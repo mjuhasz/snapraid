@@ -9,10 +9,11 @@ Sinopse
 	:	[-p, --plan PERC|bad|new|full]
 	:	[-o, --older-than DAYS] [-l, --log FILE]
 	:	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	:	[-t, --tail]
 	:	[-Z, --force-zero] [-E, --force-empty]
 	:	[-U, --force-uuid] [-D, --force-device]
 	:	[-N, --force-nocopy] [-F, --force-full]
-	:	[-R, --force-realloc]
+	:	[-R, --force-realloc] [-W, --force-realloc-tail]
 	:	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	:	[-L, --error-limit NUMBER]
 	:	[-A, --stats]
@@ -511,16 +512,24 @@ Comandos
 		moved - Arquivos movidos para um diretório diferente no mesmo disco.
 			Eles são identificados por terem o mesmo nome, tamanho,
 			carimbo de data/hora e inode, mas um diretório diferente.
-		copied - Arquivos copiados no mesmo ou em um disco diferente.
-			Observe que se eles forem realmente movidos para um disco
-			diferente, eles também serão contados em `removed`.
+		copied - Arquivos copiados no mesmo disco ou em um disco
+			diferente onde o arquivo original ainda existe.
 			Eles são identificados por terem o mesmo nome, tamanho e
-			carimbo de data/hora. Se o carimbo de data/hora sub-segundo
-			for zero, o caminho completo deve corresponder, não apenas
+			carimbo de data/hora.
+			Se o carimbo de data/hora de subsegundos for zero, o caminho
+			completo deve corresponder para ser identificado, não apenas
 			o nome.
-		restored - Arquivos com um inode diferente, mas nome, tamanho e carimbo
-			de data/hora correspondentes. Estes são geralmente arquivos
-			restaurados após terem sido excluídos.
+		relocated - Arquivos movidos no mesmo disco ou em um disco
+			diferente onde o original desapareceu.
+			Eles são identificados por terem o mesmo nome, tamanho e
+			carimbo de data/hora.
+			Se o carimbo de data/hora de subsegundos for zero, o caminho
+			completo deve corresponder para ser identificado.
+			Ao contrário dos arquivos 'moved' no mesmo disco, os arquivos
+			realocados têm um inode diferente.
+		restored - Arquivos com um inode diferente, mas com diretório,
+			nome, tamanho e carimbo de data/hora correspondentes.
+			Geralmente são arquivos restaurados após serem excluídos.
 
 	Se uma `sync` for necessária, o código de retorno do processo é 2,
 	em vez do padrão 0. O código de retorno 1 é usado para uma condição
@@ -1155,6 +1164,17 @@ Configuração
 	no arquivo de configuração e, em seguida, executando um comando `sync`.
 	No caso de renomeação, a associação é feita usando o UUID
 	armazenado dos discos.
+
+  extra NAME DIR
+	Define o nome e o ponto de montagem de discos adicionais para
+	monitorar com os comandos `smart` e `probe`.
+
+	Isso é útil para monitorar discos que não fazem parte da matriz,
+	mas que são necessários para o funcionamento do sistema, como o
+	disco de inicialização.
+
+	Observe que tais discos não são afetados pelos comandos `up` e `down`
+	porque se espera que estejam sempre girando.
 
   nohidden
 	Exclui todos os arquivos e diretórios ocultos.

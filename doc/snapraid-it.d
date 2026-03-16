@@ -9,10 +9,11 @@ Sinossi
 	:	[-p, --plan PERC|bad|new|full]
 	:	[-o, --older-than DAYS] [-l, --log FILE]
 	:	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	:	[-t, --tail]
 	:	[-Z, --force-zero] [-E, --force-empty]
 	:	[-U, --force-uuid] [-D, --force-device]
 	:	[-N, --force-nocopy] [-F, --force-full]
-	:	[-R, --force-realloc]
+	:	[-R, --force-realloc] [-W, --force-realloc-tail]
 	:	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	:	[-L, --error-limit NUMBER]
 	:	[-A, --stats]
@@ -526,15 +527,25 @@ Comandi
 		moved - File spostati in una directory diversa sullo stesso
 			disco. Sono identificati dall'avere lo stesso nome,
 			dimensioni, timestamp e inode, ma una directory diversa.
-		copied - File copiati sullo stesso o su un disco diverso.
-			Si noti che se sono stati veramente spostati su un altro
-			disco, saranno contati anche in `removed`.
-			Sono identificati dall'avere lo stesso nome, dimensioni
-			e timestamp. Se il timestamp sotto il secondo è zero,
-			il percorso completo deve corrispondere, non solo il nome.
-		restored - File con un inode diverso ma nome, dimensioni e
-			timestamp corrispondenti. Questi sono di solito file
-			ripristinati dopo essere stati eliminati.
+		copied - File copiati sullo stesso disco o su un disco diverso dove il
+			file originale esiste ancora.
+			Sono identificati dall'avere lo stesso nome, dimensione e timestamp.
+			Se il timestamp al sottomultiplo del secondo è zero,
+			il percorso completo deve corrispondere per essere
+			identificato, non solo il nome.
+		relocated - File spostati sullo stesso disco o su un disco
+			diverso dove  l'originale è scomparso.
+			Sono identificati dall' avere lo stesso nome, dimensione
+			e timestamp.
+			Se il timestamp al sottomultiplo del secondo è zero,
+			il percorso completo deve corrispondere per essere
+			identificato.
+			A differenza dei file `moved` sullo stesso disco,
+			i file ricollocati hanno un inode diverso.
+		restored - File con un inode diverso ma directory,
+			nome, dimensione e timestamp corrispondenti.
+			Questi sono solitamente file ripristinati dopo essere
+			stati eliminati.
 
 	Se è richiesto un `sync`, il codice di ritorno del processo è 2,
 	invece del predefinito 0. Il codice di ritorno 1 è utilizzato per una
@@ -1194,6 +1205,17 @@ Configurazione
 	comando `sync`.
 	In caso di ridenominazione, l'associazione viene eseguita utilizzando
 	l'UUID memorizzato dei dischi.
+
+  extra NAME DIR
+	Definisce il nome e il punto di montaggio di dischi aggiuntivi da monitorare
+	con i comandi `smart` e `probe`.
+
+	Questo è utile per monitorare i dischi che non fanno parte dell'
+	array ma sono necessari per il funzionamento del sistema, come
+	il disco di avvio.
+
+	Si noti che tali dischi non sono influenzati dai comandi `up` e `down`
+	perché si prevede che siano sempre in rotazione.
 
   nohidden
 	Esclude tutti i file e le directory nascosti.

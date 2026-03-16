@@ -9,10 +9,11 @@ Synopsis
 	:	[-p, --plan PERC|bad|new|full]
 	:	[-o, --older-than DAYS] [-l, --log FILE]
 	:	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	:	[-t, --tail]
 	:	[-Z, --force-zero] [-E, --force-empty]
 	:	[-U, --force-uuid] [-D, --force-device]
 	:	[-N, --force-nocopy] [-F, --force-full]
-	:	[-R, --force-realloc]
+	:	[-R, --force-realloc] [-W, --force-realloc-tail]
 	:	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	:	[-L, --error-limit NUMBER]
 	:	[-A, --stats]
@@ -552,16 +553,25 @@ Commands
 			verschobene Dateien. Sie werden durch denselben Namen,
 			dieselbe Größe, denselben Zeitstempel und dieselbe Inode,
 			aber ein anderes Verzeichnis identifiziert.
-		copied - Auf dieselbe oder eine andere Festplatte kopierte
-			Dateien. Beachten Sie, dass wenn sie tatsächlich auf eine
-			andere Festplatte verschoben werden, sie auch unter `removed`
-			gezählt werden. Sie werden durch denselben Namen, dieselbe
-			Größe und denselben Zeitstempel identifiziert. Wenn der
-			Untersekunden-Zeitstempel Null ist, muss der vollständige
-			Pfad übereinstimmen, nicht nur der Name.
-		restored - Dateien mit einer anderen Inode, aber übereinstimmendem
-			Namen, Größe und Zeitstempel. Dies sind normalerweise
-			Dateien, die nach dem Löschen wiederhergestellt wurden.
+		copied - Dateien, die auf dieselbe oder eine andere Festplatte
+			kopiert wurden, wobei die Originaldatei noch vorhanden ist.
+			Sie werden dadurch identifiziert, dass sie denselben Namen,
+			dieselbe Größe und denselben Zeitstempel haben.
+			Wenn der Subsekunden-Zeitstempel Null ist, muss der vollständige
+			Pfad übereinstimmen, um identifiziert zu werden, nicht nur
+			der Name.
+		relocated - Dateien, die auf dieselbe oder eine andere Festplatte
+			verschoben wurden, wobei das Original verschwunden ist.
+			Sie werden dadurch identifiziert, dass sie denselben Namen,
+			dieselbe Größe und denselben Zeitstempel haben.
+			Wenn der Subsekunden-Zeitstempel Null ist, muss der vollständige
+			Pfad übereinstimmen, um identifiziert zu werden.
+			Im Gegensatz zu 'moved' Dateien auf derselben Festplatte haben
+			verschobene Dateien einen anderen Inode.
+		restored - Dateien mit einem anderen Inode, aber passendem
+			Verzeichnis, Namen, Größe und Zeitstempel.
+			Dies sind in der Regel Dateien, die nach dem Löschen
+			wiederhergestellt wurden.
 
 	Wenn ein `sync` erforderlich ist, ist der Rückgabecode des Prozesses 2
 	anstelle des Standardwerts 0. Der Rückgabecode 1 wird für eine
@@ -1221,6 +1231,17 @@ Configuration
 	direkt in der Konfigurationsdatei ändern und dann einen `sync`-Befehl
 	ausführen. Im Falle einer Umbenennung erfolgt die Zuordnung
 	mithilfe der gespeicherten UUID der Festplatten.
+
+  extra NAME DIR
+	Definiert den Namen und Einhängepunkt zusätzlicher Festplatten, die mit den
+	Befehlen `smart` und `probe` überwacht werden sollen.
+
+	Dies ist nützlich für die Überwachung von Festplatten, die nicht Teil des
+	Arrays sind, aber für das Funktionieren des Systems erforderlich sind, wie
+	z. B. die Boot-Festplatte.
+
+	Beachten Sie, dass solche Festplatten nicht von den Befehlen `up` und `down`
+	betroffen sind, da von ihnen erwartet wird, dass sie sich immer drehen.
 
   nohidden
 	Schließt alle versteckten Dateien und Verzeichnisse aus.

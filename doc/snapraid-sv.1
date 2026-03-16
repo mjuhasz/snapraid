@@ -30,6 +30,10 @@ snapraid [\-c, \-\-conf CONFIG]
 .PD 0
 .PP
 .PD
+	[\-t, \-\-tail]
+.PD 0
+.PP
+.PD
 	[\-Z, \-\-force\-zero] [\-E, \-\-force\-empty]
 .PD 0
 .PP
@@ -42,7 +46,7 @@ snapraid [\-c, \-\-conf CONFIG]
 .PD 0
 .PP
 .PD
-	[\-R, \-\-force\-realloc]
+	[\-R, \-\-force\-realloc] [\-W, \-\-force\-realloc\-tail]
 .PD 0
 .PP
 .PD
@@ -789,15 +793,26 @@ De identifieras genom att ha samma namn, storlek, tidsstämpel
 och inode, men en annan katalog.
 .HP 4
 .I copied
-Filer kopierade på samma eller en annan disk. Observera att om
-de verkligen flyttas till en annan disk, kommer de också att
-räknas i \`removed\`.
+Filer som kopierats på samma eller en annan disk där
+originalfilen fortfarande finns kvar.
 De identifieras genom att ha samma namn, storlek och
-tidsstämpel. Om undertidsstämpeln är noll,
-måste hela sökvägen matcha, inte bara namnet.
+tidsstämpel.
+Om tidsstämpeln för undersekunder är noll måste hela sökvägen
+matcha för att identifieras, inte bara namnet.
+.HP 4
+.I relocated
+Filer som flyttats på samma eller en annan disk där
+originalet har försvunnit.
+De identifieras genom att ha samma namn, storlek och
+tidsstämpel.
+Om tidsstämpeln för undersekunder är noll måste hela sökvägen
+matcha för att identifieras.
+Till skillnad från \'moved\' filer på samma disk har omlokaliserade
+filer en annan inode.
 .HP 4
 .I restored
-Filer med en annan inode men matchande namn, storlek och tidsstämpel.
+Filer med en annan inode men matchande katalog, namn,
+storlek och tidsstämpel.
 Dessa är vanligtvis filer som återställts efter att ha raderats.
 .PD
 .RE
@@ -1403,6 +1418,16 @@ Du kan byta namn på en disk senare genom att ändra NAMN direkt
 i konfigurationsfilen och sedan köra ett \`sync\`\-kommando.
 I händelse av namnbyte görs associationen med hjälp av den lagrade
 UUID:n för diskarna.
+.SS extra NAME DIR 
+Definierar namn och monteringspunkt för ytterligare diskar som ska
+övervakas med kommandona \`smart\` och \`probe\`.
+.PP
+Detta är användbart för att övervaka diskar som inte ingår i arrayen
+men som krävs för att systemet ska fungera, till exempel
+startdisken.
+.PP
+Observera att sådana diskar inte påverkas av kommandona \`up\` och
+\`down\` eftersom de förväntas alltid snurra.
 .SS nohidden 
 Exkluderar alla dolda filer och kataloger.
 I Unix är dolda filer de som börjar med \`.\`.

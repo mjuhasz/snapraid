@@ -9,10 +9,11 @@ Synopsis
 	:	[-p, --plan PERC|bad|new|full]
 	:	[-o, --older-than DAYS] [-l, --log FILE]
 	:	[-s, --spin-down-on-error] [-w, --bw-limit RATE]
+	:	[-t, --tail]
 	:	[-Z, --force-zero] [-E, --force-empty]
 	:	[-U, --force-uuid] [-D, --force-device]
 	:	[-N, --force-nocopy] [-F, --force-full]
-	:	[-R, --force-realloc]
+	:	[-R, --force-realloc] [-W, --force-realloc-tail]
 	:	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	:	[-L, --error-limit NUMBER]
 	:	[-A, --stats]
@@ -504,13 +505,22 @@ Kommandon
 		moved - Filer flyttade till en annan katalog på samma disk.
 			De identifieras genom att ha samma namn, storlek, tidsstämpel
 			och inode, men en annan katalog.
-		copied - Filer kopierade på samma eller en annan disk. Observera att om
-			de verkligen flyttas till en annan disk, kommer de också att
-			räknas i `removed`.
+		copied - Filer som kopierats på samma eller en annan disk där
+			originalfilen fortfarande finns kvar.
 			De identifieras genom att ha samma namn, storlek och
-			tidsstämpel. Om undertidsstämpeln är noll,
-			måste hela sökvägen matcha, inte bara namnet.
-		restored - Filer med en annan inode men matchande namn, storlek och tidsstämpel.
+			tidsstämpel.
+			Om tidsstämpeln för undersekunder är noll måste hela sökvägen
+			matcha för att identifieras, inte bara namnet.
+		relocated - Filer som flyttats på samma eller en annan disk där
+			originalet har försvunnit.
+			De identifieras genom att ha samma namn, storlek och
+			tidsstämpel.
+			Om tidsstämpeln för undersekunder är noll måste hela sökvägen
+			matcha för att identifieras.
+			Till skillnad från 'moved' filer på samma disk har omlokaliserade
+			filer en annan inode.
+		restored - Filer med en annan inode men matchande katalog, namn,
+			storlek och tidsstämpel.
 			Dessa är vanligtvis filer som återställts efter att ha raderats.
 
 	Om en `sync` krävs är processens returkod 2, istället för standard 0.
@@ -1126,6 +1136,17 @@ Konfiguration
 	i konfigurationsfilen och sedan köra ett `sync`-kommando.
 	I händelse av namnbyte görs associationen med hjälp av den lagrade
 	UUID:n för diskarna.
+
+  extra NAME DIR
+	Definierar namn och monteringspunkt för ytterligare diskar som ska
+	övervakas med kommandona `smart` och `probe`.
+
+	Detta är användbart för att övervaka diskar som inte ingår i arrayen
+	men som krävs för att systemet ska fungera, till exempel
+	startdisken.
+
+	Observera att sådana diskar inte påverkas av kommandona `up` och
+	`down` eftersom de förväntas alltid snurra.
 
   nohidden
 	Exkluderar alla dolda filer och kataloger.

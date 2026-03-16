@@ -1143,7 +1143,8 @@ Configuration
 	array but are required for the system to function, such as
 	the boot disk.
 
-	Note that such disks are not affected by the `up` and `down` commands.
+	Note that such disks are not affected by the `up` and `down` commands
+	because they are expected to be always spinning.
 
   nohidden
 	Excludes all hidden files and directories.

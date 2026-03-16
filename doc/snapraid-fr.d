@@ -12,7 +12,7 @@ Synopsis
 	:	[-Z, --force-zero] [-E, --force-empty]
 	:	[-U, --force-uuid] [-D, --force-device]
 	:	[-N, --force-nocopy] [-F, --force-full]
-	:	[-R, --force-realloc]
+	:	[-R, --force-realloc] [-W, --force-realloc-tail]
 	:	[-S, --start BLKSTART] [-B, --count BLKCOUNT]
 	:	[-L, --error-limit NOMBRE]
 	:	[-A, --stats]
@@ -540,16 +540,24 @@ Commandes
 			même disque. Ils sont identifiés par le même nom, la
 			même taille, le même horodatage et le même inode, mais
 			un répertoire différent.
-		copied - Fichiers copiés sur le même disque ou un disque différent.
-			Notez que s'ils sont vraiment déplacés vers un autre
-			disque, ils seront également comptés dans `removed`.
-			Ils sont identifiés par le même nom, la même taille
-			et le même horodatage. Si l'horodatage en sous-seconde
-			est zéro, le chemin complet doit correspondre, pas seulement
-			le nom.
-		restored - Fichiers avec un inode différent mais correspondant
-			au nom, à la taille et à l'horodatage. Il s'agit
-			généralement de fichiers restaurés après avoir été supprimés.
+		copied - Fichiers copiés sur le même disque ou sur un disque
+			différent où le fichier original existe toujours.
+			Ils sont identifiés par le fait qu'ils ont le même nom, la même
+			taille et le même horodatage.
+			Si l'horodatage à la sous-seconde est nul, le chemin complet
+			doit correspondre pour être identifié, pas seulement le nom.
+		relocated - Fichiers déplacés sur le même disque ou sur un disque
+			différent où l'original a disparu.
+			Ils sont identifiés par le fait qu'ils ont le même nom, la même
+			taille et le même horodatage.
+			Si l'horodatage à la sous-seconde est nul, le chemin complet
+			doit correspondre pour être identifié.
+			Contrairement aux fichiers 'moved' sur le même disque, les
+			fichiers relocalisés ont un inode différent.
+		restored - Fichiers avec un inode différent mais dont le
+			répertoire, le nom, la taille et l'horodatage correspondent.
+			Il s'agit généralement de fichiers restaurés après avoir été
+			supprimés.
 
 	Si un `sync` est requis, le code de retour du processus est 2,
 	au lieu du 0 par défaut. Le code de retour 1 est utilisé pour
@@ -1219,6 +1227,17 @@ Configuration
 	dans le fichier de configuration, puis en exécutant une commande `sync`.
 	Dans le cas d'un renommage, l'association est faite en utilisant l'UUID
 	stocké des disques.
+
+  extra NAME DIR
+	Définit le nom et le point de montage de disques supplémentaires à
+	surveiller avec les commandes `smart` et `probe`.
+
+	Ceci est utile pour surveiller des disques qui ne font pas partie de
+	la grappe mais qui sont nécessaires au fonctionnement du système,
+	comme le disque de démarrage.
+
+	Notez que ces disques ne sont pas affectés par les commandes `up` et
+	`down` car ils sont censés toujours être en rotation.
 
   nohidden
 	Exclut tous les fichiers et répertoires cachés.

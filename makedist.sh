@@ -1,17 +1,6 @@
 #!/bin/sh
 #
 
-CHECK=check
-DEBUG=
-
-if test "x$1" = "x-f"; then
-CHECK=all
-fi
-
-if test "x$1" = "x-d"; then
-DEBUG=--enable-debug
-fi
-
 # Ask root permissions at the start
 sudo echo We are root
 
@@ -20,7 +9,7 @@ make distclean
 # Reconfigure (with force) to get the latest revision from git
 autoreconf -f
 
-if ! ./configure.windows-x86 $DEBUG; then
+if ! ./configure.windows-x86; then
 	exit 1
 fi
 
@@ -32,11 +21,11 @@ if ! make distwindows-x86 distclean; then
 	exit 1
 fi
 
-if ! ./configure.windows-x64 $DEBUG; then
+if ! ./configure.windows-x64; then
 	exit 1
 fi
 
-if ! make -j4 $CHECK; then
+if ! make -j4; then
 	exit 1
 fi
 

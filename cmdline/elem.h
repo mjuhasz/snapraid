@@ -265,6 +265,18 @@ struct snapraid_block {
  */
 #define FILE_IS_MISSING 0x800
 
+#define FILE_IS_HARDLINK 0x1000 /**< If it's an hardlink. */
+#define FILE_IS_SYMLINK 0x2000 /**< If it's a file symlink. */
+#define FILE_IS_SYMDIR 0x4000 /**< If it's a dir symlink for Windows. Not yet supported. */
+#define FILE_IS_JUNCTION 0x8000 /**< If it's a junction for Windows. Not yet supported. */
+#define FILE_IS_LINK_MASK 0xF000 /**< Mask for link type. */
+
+/**
+ * Flags from this bit are shared between multiple threads
+ * and goes in the shared_flags instead of flags
+ */
+#define FILE_FLAGS_SHARED_BIT 16
+
 /**
  * During scan if the file is found missing and relocated to another place
  *
@@ -273,13 +285,7 @@ struct snapraid_block {
  * This specific bit is written using protection from the stamp_mutex during
  * the multithread scan.
  */
-#define FILE_IS_RELOCATED 0x1000
-
-#define FILE_IS_HARDLINK 0x10000 /**< If it's an hardlink. */
-#define FILE_IS_SYMLINK 0x20000 /**< If it's a file symlink. */
-#define FILE_IS_SYMDIR 0x40000 /**< If it's a dir symlink for Windows. Not yet supported. */
-#define FILE_IS_JUNCTION 0x80000 /**< If it's a junction for Windows. Not yet supported. */
-#define FILE_IS_LINK_MASK 0xF0000 /**< Mask for link type. */
+#define FILE_IS_RELOCATED 0x10000
 
 /**
  * File.
@@ -292,7 +298,8 @@ struct snapraid_file {
 	struct snapraid_block* blockvec; /**< All the blocks of the file. */
 	int mtime_nsec; /**< Modification time nanoseconds. In the range 0 <= x < 1,000,000,000, or STAT_NSEC_INVALID if not present. */
 	block_off_t blockmax; /**< Number of blocks. */
-	unsigned flag; /**< FILE_IS_* flags. */
+	uint16_t flag; /**< FILE_IS_* flags. */
+	uint16_t shared_flag; /**< FILE_IS_RELOCATED flag. Keep it separated as it's accessed by multiple threads */
 	char* sub; /**< Sub path of the file. Without the disk dir. The disk is implicit. */
 
 	/* nodes for data structures */
@@ -786,17 +793,32 @@ static inline int block_has_file_and_valid_parity(const struct snapraid_block* b
 
 static inline int file_flag_has(const struct snapraid_file* file, unsigned mask)
 {
-	return (file->flag & mask) == mask;
+	if (mask >= (1 << FILE_FLAGS_SHARED_BIT)) {
+		mask >>= FILE_FLAGS_SHARED_BIT;
+		return (file->shared_flag & mask) == mask;
+	} else {
+		return (file->flag & mask) == mask;
+	}
 }
 
 static inline void file_flag_set(struct snapraid_file* file, unsigned mask)
 {
-	file->flag |= mask;
+	if (mask >= (1 << FILE_FLAGS_SHARED_BIT)) {
+		mask >>= FILE_FLAGS_SHARED_BIT;
+		file->shared_flag |= mask;
+	} else {
+		file->flag |= mask;
+	}
 }
 
 static inline void file_flag_clear(struct snapraid_file* file, unsigned mask)
 {
-	file->flag &= ~mask;
+	if (mask >= (1 << FILE_FLAGS_SHARED_BIT)) {
+		mask >>= FILE_FLAGS_SHARED_BIT;
+		file->shared_flag &= ~mask;
+	} else {
+		file->flag &= ~mask;
+	}
 }
 
 /**

@@ -392,6 +392,7 @@ struct snapraid_file* file_alloc(unsigned block_size, const char* sub, data_off_
 	file->inode = inode;
 	file->physical = physical;
 	file->flag = 0;
+	file->shared_flag = 0;
 	file->blockvec = malloc_nofail(file->blockmax * block_sizeof());
 
 	for (i = 0; i < file->blockmax; ++i) {

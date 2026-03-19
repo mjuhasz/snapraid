@@ -83,12 +83,8 @@ int handle_create(struct snapraid_handle* handle, struct snapraid_file* file, in
 
 	if (handle->f == -1) {
 		/* LCOV_EXCL_START */
-		/* invalidate for error */
-		handle->file = 0;
-		handle->f = -1;
-		handle->valid_size = 0;
-
 		log_fatal(errno, "Error opening file '%s'. %s.\n", handle->path, strerror(errno));
+		handle_close(handle);
 		return -1;
 		/* LCOV_EXCL_STOP */
 	}
@@ -101,6 +97,7 @@ int handle_create(struct snapraid_handle* handle, struct snapraid_file* file, in
 	if (ret != 0) {
 		/* LCOV_EXCL_START */
 		log_fatal(errno, "Error accessing file '%s'. %s.\n", handle->path, strerror(errno));
+		handle_close(handle);
 		return -1;
 		/* LCOV_EXCL_STOP */
 	}
@@ -112,6 +109,7 @@ int handle_create(struct snapraid_handle* handle, struct snapraid_file* file, in
 	if (ret != 0) {
 		/* LCOV_EXCL_START */
 		log_fatal(errno, "Error advising file '%s'. %s.\n", handle->path, strerror(errno));
+		handle_close(handle);
 		return -1;
 		/* LCOV_EXCL_STOP */
 	}
@@ -168,17 +166,13 @@ int handle_open(struct snapraid_handle* handle, struct snapraid_file* file, int 
 	/* open for read */
 	handle->f = open_noatime(handle->path, flags | O_RDONLY);
 	if (handle->f == -1) {
-		/* invalidate for error */
-		handle->file = 0;
-		handle->f = -1;
-		handle->valid_size = 0;
-
 		if (errno == ENOENT)
 			out_missing(errno, "Missing file '%s'.\n", handle->path);
 		else if (errno == EACCES)
 			out(errno, "Permission denied for file '%s'.\n", handle->path);
 		else
 			out(errno, "Error opening file '%s'. %s.\n", handle->path, strerror(errno));
+		handle_close(handle);
 		return -1;
 	}
 
@@ -190,6 +184,7 @@ int handle_open(struct snapraid_handle* handle, struct snapraid_file* file, int 
 	if (ret != 0) {
 		/* LCOV_EXCL_START */
 		out(errno, "Error accessing file '%s'. %s.\n", handle->path, strerror(errno));
+		handle_close(handle);
 		return -1;
 		/* LCOV_EXCL_STOP */
 	}
@@ -201,6 +196,7 @@ int handle_open(struct snapraid_handle* handle, struct snapraid_file* file, int 
 	if (ret != 0) {
 		/* LCOV_EXCL_START */
 		out(errno, "Error advising file '%s'. %s.\n", handle->path, strerror(errno));
+		handle_close(handle);
 		return -1;
 		/* LCOV_EXCL_STOP */
 	}

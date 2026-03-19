@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Run all the Coverage and Valgrind tests
+# Run all the Valgrind tests
 #
 
 # Source directory
@@ -14,21 +14,6 @@ make distclean
 cd $DEST
 
 cp $SOURCE/valgrind.supp $DEST
-
-# Coverage
-if ! $SOURCE/configure --enable-coverage --enable-sde; then
-	exit 1
-fi
-
-if ! make lcov_reset check lcov_capture lcov_html; then
-	exit 1
-fi
-
-cp -a cov $SOURCE/cov
-
-if ! make distclean; then
-	exit 1
-fi
 
 # Valgrind
 if ! $SOURCE/configure --enable-valgrind; then

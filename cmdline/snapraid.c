@@ -907,7 +907,7 @@ int parse_option_size(const char* arg, uint64_t* out_size)
 
 	/* parse the number part */
 	data_off_t size = strtoul(arg, &e, 10);
-	if (!e || e == arg)
+	if (e == arg)
 		return -1;
 
 	/* Handle suffixes */
@@ -919,7 +919,7 @@ int parse_option_size(const char* arg, uint64_t* out_size)
 		size *= GIGA;
 	} else if ((e[0] == 't' || e[0] == 'T') && e[1] == 0) {
 		size *= TERA;
-	} else if (e[0] != '\0') {
+	} else if (e[0] != 0) {
 		return -1;
 	}
 
@@ -1100,7 +1100,8 @@ int snapraid_main(int argc, char* argv[])
 				plan100 = SCRUB_FULL;
 			} else {
 				double plan_double = strtod(optarg, &e);
-				if (!e || *e != 0
+				if (e == optarg
+					|| *e != 0
 					|| !isfinite(plan_double)
 					|| plan_double < 0
 					|| plan_double > 100
@@ -1115,7 +1116,7 @@ int snapraid_main(int argc, char* argv[])
 			break;
 		case 'o' :
 			olderthan = strtoul(optarg, &e, 10);
-			if (!e || *e || olderthan > 1000) {
+			if (e == optarg || *e || olderthan > 1000) {
 				/* LCOV_EXCL_START */
 				log_fatal(EUSER, "Invalid number of days '%s'\n", optarg);
 				exit(EXIT_FAILURE);
@@ -1139,7 +1140,7 @@ int snapraid_main(int argc, char* argv[])
 			break;
 		case 'S' :
 			blockstart = strtoul(optarg, &e, 0);
-			if (!e || *e) {
+			if (e == optarg || *e) {
 				/* LCOV_EXCL_START */
 				log_fatal(EUSER, "Invalid start position '%s'\n", optarg);
 				exit(EXIT_FAILURE);
@@ -1148,7 +1149,7 @@ int snapraid_main(int argc, char* argv[])
 			break;
 		case 'B' :
 			blockcount = strtoul(optarg, &e, 0);
-			if (!e || *e) {
+			if (e == optarg || *e) {
 				/* LCOV_EXCL_START */
 				log_fatal(EUSER, "Invalid count number '%s'\n", optarg);
 				exit(EXIT_FAILURE);
@@ -1157,7 +1158,7 @@ int snapraid_main(int argc, char* argv[])
 			break;
 		case 'L' :
 			opt.io_error_limit = strtoul(optarg, &e, 0);
-			if (!e || *e) {
+			if (e == optarg || *e) {
 				/* LCOV_EXCL_START */
 				log_fatal(EUSER, "Invalid error limit number '%s'\n", optarg);
 				exit(EXIT_FAILURE);
@@ -1262,7 +1263,7 @@ int snapraid_main(int argc, char* argv[])
 			break;
 		case OPT_GUI_THRESHOLD_REMOVES :
 			opt.gui_threshold_removes = strtoul(optarg, &e, 0);
-			if (!e || *e) {
+			if (e == optarg || *e) {
 				/* LCOV_EXCL_START */
 				log_fatal(EUSER, "Invalid threshold '%s'\n", optarg);
 				exit(EXIT_FAILURE);
@@ -1271,7 +1272,7 @@ int snapraid_main(int argc, char* argv[])
 			break;
 		case OPT_GUI_THRESHOLD_UPDATES :
 			opt.gui_threshold_updates = strtoul(optarg, &e, 0);
-			if (!e || *e) {
+			if (e == optarg || *e) {
 				/* LCOV_EXCL_START */
 				log_fatal(EUSER, "Invalid threshold '%s'\n", optarg);
 				exit(EXIT_FAILURE);

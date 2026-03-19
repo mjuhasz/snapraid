@@ -1100,13 +1100,17 @@ int snapraid_main(int argc, char* argv[])
 				plan100 = SCRUB_FULL;
 			} else {
 				double plan_double = strtod(optarg, &e);
-				plan100 = plan_double * 100;
-				if (!e || *e || plan100 > 10000) {
+				if (!e || *e != 0
+					|| !isfinite(plan_double)
+					|| plan_double < 0
+					|| plan_double > 100
+				) {
 					/* LCOV_EXCL_START */
 					log_fatal(EUSER, "Invalid plan/percentage '%s'\n", optarg);
 					exit(EXIT_FAILURE);
 					/* LCOV_EXCL_STOP */
 				}
+				plan100 = plan_double * 100;
 			}
 			break;
 		case 'o' :

@@ -1,6 +1,10 @@
 SnapRAID HISTORY
 ================
 
+14.0rc3d 22/03/2026
+===================
+ * Fixed data race on the new RELOCATED flag
+
 14.0rc3c 16/03/2026
 ===================
  * Log additional information to allow to handle dynamic devices associations

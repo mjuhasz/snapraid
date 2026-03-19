@@ -2404,6 +2404,9 @@ void os_init(int opt)
 	}
 #endif
 
+	/* set LC_ALL=C to make smartctl ignoring the locale when printing info */
+	setenv("LC_ALL", "C", 1);
+
 	(void)opt;
 }
 

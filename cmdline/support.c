@@ -1976,19 +1976,8 @@ int smartctl_attribute(FILE* f, const char* file, const char* name, struct smart
 		} else if (smatch(s, "Rotation Rate: Solid State") == 0) {
 			info[INFO_ROTATION_RATE] = 0;
 		} else if (sscanf(s, "Rotation Rate: %" SCNu64, &info[INFO_ROTATION_RATE]) == 1) {
-		} else if (smatch(s, "User Capacity:") == 0) {
-			char* begin = strchr(s, ':');
-			char* end = strstr(s, "bytes");
-			if (begin != 0 && end != 0 && begin < end) {
-				char* p;
-				info[INFO_SIZE] = 0;
-				for (p = begin; p != end; ++p) {
-					if (isdigit(*p)) {
-						info[INFO_SIZE] *= 10;
-						info[INFO_SIZE] += *p - '0';
-					}
-				}
-			}
+		} else if (snumber(s, "User Capacity:", &raw) == 0) {
+			info[INFO_SIZE] = raw;
 		} else if (sscanf(s, "Model Family: %63[^\n]", family) == 1) {
 			strtrim(family);
 		} else if (sscanf(s, "Device Model: %63[^\n]", model) == 1) {

@@ -1,6 +1,10 @@
 SnapRAID HISTORY
 ================
 
+14.0rc3e 22/03/2026
+===================
+ * Fixed reading of serial number in Windows
+
 14.0rc3d 22/03/2026
 ===================
  * Fixed data race on the new RELOCATED flag

@@ -2537,6 +2537,40 @@ retry:
 	return 0;
 }
 
+static int serial_descriptor(PSTORAGE_DEVICE_DESCRIPTOR descriptor, size_t size, char* output, size_t output_size)
+{
+	if (descriptor->SerialNumberOffset == 0
+		|| descriptor->SerialNumberOffset == (DWORD)-1
+		|| descriptor->SerialNumberOffset >= size)
+		return -1;
+
+	const char* raw = (const char*)descriptor + descriptor->SerialNumberOffset;
+	size_t len = 0;
+
+	/* find the length, not assuming a 0 ending */
+	while (descriptor->SerialNumberOffset + len < size && raw[len] != 0)
+		++len;
+
+	if (len < 6) /* a serial cannot be so short */
+		return -1;
+
+	if (len + 1 > output_size)
+		return -1;
+
+	/* all must be printable */
+	for (size_t i = 0; i < len; ++i) {
+		if (!isprint((unsigned char)raw[i]))
+			return -1;
+	}
+
+	memcpy(output, raw, len);
+	output[len] = 0;
+
+	strtrim(output);
+
+	return 0;
+}
+
 static void devattr_property(HANDLE h, char* serial, char* model, char* inter)
 {
 	STORAGE_PROPERTY_QUERY query = { 0 };
@@ -2568,15 +2602,14 @@ static void devattr_property(HANDLE h, char* serial, char* model, char* inter)
 		strtrim(model);
 	}
 
-	if (serial && *serial == 0 && desc->SerialNumberOffset) {
+	if (serial && *serial == 0) {
 		/*
-		 * This is the RAW serial, maybe HEX encoded, maybe BYTES SWAPPED
-		 * but we don't care because we just need any identifier
+		 * This is the RAW serial, maybe HEX encoded, maybe BYTES SWAPPED,
+		 * but we don't care because we just need any identifier.
 		 *
-		 * If smartctl was not able to read it, we now accept anything
+		 * If smartctl was not able to read it, we now accept anything.
 		 */
-		snprintf(serial, SMART_MAX, "%s", (char*)(buffer + desc->SerialNumberOffset));
-		strtrim(serial);
+		serial_descriptor(desc, bytes, serial, SMART_MAX);
 	}
 
 #define BusTypeVirtual            0x0E

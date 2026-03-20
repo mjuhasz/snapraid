@@ -1821,11 +1821,19 @@ static int smatch(const char* str, const char* pattern)
 	return 0;
 }
 
+int is_sep(char c)
+{
+	return c == '.'
+	       || c == ','
+	       || c == '\''
+	       || c == (char)0xa0;  /* french */
+}
+
 /*
- * scomma()
+ * snumber()
  *
  * Matches a literal prefix (the second argument), then parses the following
- * unsigned 64-bit integer, allowing comma thousand separators (U.S. style).
+ * unsigned 64-bit integer, allowing thousand separators.
  *
  * Whitespace is flexible around the prefix and before the number.
  * Commas are ignored during number parsing but basic validation is applied.
@@ -1834,7 +1842,7 @@ static int smatch(const char* str, const char* pattern)
  *   1 - successfully parsed a valid uint64_t
  *   0 - prefix mismatch, no digits found, invalid format or overflow
  */
-int scomma(const char* str, const char* prefix, uint64_t* value)
+int snumber(const char* str, const char* prefix, uint64_t* value)
 {
 	const char* s = str;
 	const char* f = prefix;
@@ -1862,7 +1870,7 @@ int scomma(const char* str, const char* prefix, uint64_t* value)
 
 	uint64_t num = 0;
 	int digits_seen = 0;
-	int comma_seen = 0;
+	int sep_seen = 0;
 
 	/* parse digits, ignoring commas */
 	while (*s) {
@@ -1875,17 +1883,17 @@ int scomma(const char* str, const char* prefix, uint64_t* value)
 
 			num = num * 10ULL + digit;
 			++digits_seen;
-			comma_seen = 0;
-		} else if (*s == ',') {
-			/* disallow leading commas */
+			sep_seen = 0;
+		} else if (is_sep(*s)) {
+			/* disallow leading separators */
 			if (digits_seen == 0)
 				return 0;
 
-			/* if two consecutive commas, stop parsing */
-			if (comma_seen)
+			/* if two consecutive separators, stop parsing */
+			if (sep_seen)
 				break;
 
-			comma_seen = 1;
+			sep_seen = 1;
 		} else {
 			/* any other character ends the number */
 			break;
@@ -2130,41 +2138,41 @@ int smartctl_attribute(FILE* f, const char* file, const char* name, struct smart
 		} else if (smatch(s, "NVMe Version:") == 0) {
 			strcpy(inter, "NVMe");
 			/* special entries */
-		} else if (scomma(s, "Media and Data Integrity Errors:", &raw) == 1) {
+		} else if (snumber(s, "Media and Data Integrity Errors:", &raw) == 1) {
 			smart[SMART_ERROR_MEDIUM].raw = raw;
-		} else if (scomma(s, "Error Information Log Entries:", &raw) == 1) {
+		} else if (snumber(s, "Error Information Log Entries:", &raw) == 1) {
 			smart[SMART_ERROR_PROTOCOL].raw = raw;
 		} else if (sscanf(s, "Percentage Used: %" SCNu64 "%%", &raw) == 1) {
 			smart[SMART_WEAR_LEVEL].raw = raw; /* take care that it can be greather than 100%, meaning that it's used over the expected lifetime */
 			/* map generic attributes to SMART attr */
 		} else if (sscanf(s, "Temperature: %" SCNu64, &smart[SMART_TEMPERATURE_CELSIUS].raw) == 1) {
 			pathcpy(smart[SMART_TEMPERATURE_CELSIUS].name, sizeof(smart[SMART_TEMPERATURE_CELSIUS].name), "Temperature");
-		} else if (scomma(s, "Power On Hours:", &smart[SMART_POWER_ON_HOURS].raw) == 1) {
+		} else if (snumber(s, "Power On Hours:", &smart[SMART_POWER_ON_HOURS].raw) == 1) {
 			pathcpy(smart[SMART_POWER_ON_HOURS].name, sizeof(smart[SMART_POWER_ON_HOURS].name), "Power_On_Hours");
-		} else if (scomma(s, "Power Cycles:", &smart[SMART_POWER_CYCLE_COUNT].raw) == 1) {
+		} else if (snumber(s, "Power Cycles:", &smart[SMART_POWER_CYCLE_COUNT].raw) == 1) {
 			pathcpy(smart[SMART_POWER_CYCLE_COUNT].name, sizeof(smart[SMART_POWER_CYCLE_COUNT].name), "Power_Cycles");
 			/* map specific attributes to UNUSED SMART attr */
 		} else if (sscanf(s, "Critical Warning: %" SCNx64, &smart[SMART_NVME_CRITICAL_WARNING].raw) == 1) {
 			pathcpy(smart[SMART_NVME_CRITICAL_WARNING].name, sizeof(smart[SMART_NVME_CRITICAL_WARNING].name), "Critical_Warning");
 		} else if (sscanf(s, "Available Spare: %" SCNu64 "%%", &smart[SMART_NVME_AVAILABLE_SPARE].raw) == 1) {
 			pathcpy(smart[SMART_NVME_AVAILABLE_SPARE].name, sizeof(smart[SMART_NVME_AVAILABLE_SPARE].name), "Available_Spare");
-		} else if (scomma(s, "Data Units Read:", &smart[SMART_NVME_DATA_UNITS_READ].raw) == 1) {
+		} else if (snumber(s, "Data Units Read:", &smart[SMART_NVME_DATA_UNITS_READ].raw) == 1) {
 			pathcpy(smart[SMART_NVME_DATA_UNITS_READ].name, sizeof(smart[SMART_NVME_DATA_UNITS_READ].name), "Data_Units_Read");
-		} else if (scomma(s, "Data Units Written:", &smart[SMART_NVME_DATA_UNITS_WRITTEN].raw) == 1) {
+		} else if (snumber(s, "Data Units Written:", &smart[SMART_NVME_DATA_UNITS_WRITTEN].raw) == 1) {
 			pathcpy(smart[SMART_NVME_DATA_UNITS_WRITTEN].name, sizeof(smart[SMART_NVME_DATA_UNITS_WRITTEN].name), "Data_Units_Written");
-		} else if (scomma(s, "Host Read Commands:", &smart[SMART_NVME_HOST_READ_COMMANDS].raw) == 1) {
+		} else if (snumber(s, "Host Read Commands:", &smart[SMART_NVME_HOST_READ_COMMANDS].raw) == 1) {
 			pathcpy(smart[SMART_NVME_HOST_READ_COMMANDS].name, sizeof(smart[SMART_NVME_HOST_READ_COMMANDS].name), "Host_Read_Commands");
-		} else if (scomma(s, "Host Write Commands:", &smart[SMART_NVME_HOST_WRITE_COMMANDS].raw) == 1) {
+		} else if (snumber(s, "Host Write Commands:", &smart[SMART_NVME_HOST_WRITE_COMMANDS].raw) == 1) {
 			pathcpy(smart[SMART_NVME_HOST_WRITE_COMMANDS].name, sizeof(smart[SMART_NVME_HOST_WRITE_COMMANDS].name), "Host_Write_Commands");
-		} else if (scomma(s, "Controller Busy Time:", &smart[SMART_NVME_CONTROLLER_BUSY_TIME].raw) == 1) {
+		} else if (snumber(s, "Controller Busy Time:", &smart[SMART_NVME_CONTROLLER_BUSY_TIME].raw) == 1) {
 			pathcpy(smart[SMART_NVME_CONTROLLER_BUSY_TIME].name, sizeof(smart[SMART_NVME_CONTROLLER_BUSY_TIME].name), "Controller_Busy_Time");
-		} else if (scomma(s, "Unsafe Shutdowns:", &smart[SMART_NVME_UNSAFE_SHUTDOWNS].raw) == 1) {
+		} else if (snumber(s, "Unsafe Shutdowns:", &smart[SMART_NVME_UNSAFE_SHUTDOWNS].raw) == 1) {
 			pathcpy(smart[SMART_NVME_UNSAFE_SHUTDOWNS].name, sizeof(smart[SMART_NVME_UNSAFE_SHUTDOWNS].name), "Unsafe_Shutdowns");
 			/* smartctl doesn't print this with command, but %d */
-		} else if (scomma(s, "Warning  Comp. Temperature Time:", &smart[SMART_NVME_WARNING_COMP_TEMPERATURE_TIME].raw) == 1) {
+		} else if (snumber(s, "Warning  Comp. Temperature Time:", &smart[SMART_NVME_WARNING_COMP_TEMPERATURE_TIME].raw) == 1) {
 			pathcpy(smart[SMART_NVME_WARNING_COMP_TEMPERATURE_TIME].name, sizeof(smart[SMART_NVME_WARNING_COMP_TEMPERATURE_TIME].name), "Warning_Comp_Temperature_Time");
 			/* smartctl doesn't print this with command, but %d */
-		} else if (scomma(s, "Critical Comp. Temperature Time:", &smart[SMART_NVME_CRITICAL_COMP_TEMPERATURE_TIME].raw) == 1) {
+		} else if (snumber(s, "Critical Comp. Temperature Time:", &smart[SMART_NVME_CRITICAL_COMP_TEMPERATURE_TIME].raw) == 1) {
 			pathcpy(smart[SMART_NVME_CRITICAL_COMP_TEMPERATURE_TIME].name, sizeof(smart[SMART_NVME_CRITICAL_COMP_TEMPERATURE_TIME].name), "Critical_Comp_Temperature_Time");
 			/* ATA Attributes table */
 		} else if (smatch(s, "ID#") == 0) {

@@ -178,7 +178,12 @@ void os_init(int opt)
 
 	exedir_init();
 
-	/* set LC_ALL=C to make smartctl ignoring the locale when printing info */
+	/*
+	 * Set LC_ALL=C to make child ignoring the locale when printing info
+	 *
+	 * Note anyway that in Windows this trick doesn't work because the
+	 * Windows locale is used with priority.
+	 */
 	_wputenv_s(L"LC_ALL", L"C");
 }
 

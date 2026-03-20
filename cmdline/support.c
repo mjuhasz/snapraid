@@ -1826,6 +1826,7 @@ int is_sep(char c)
 	return c == '.'
 	       || c == ','
 	       || c == '\''
+	       || c == ' ' /* 0xa0 converted by space for no code page */
 	       || c == (char)0xa0;  /* french */
 }
 

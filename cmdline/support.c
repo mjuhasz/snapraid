@@ -1977,7 +1977,7 @@ int smartctl_attribute(FILE* f, const char* file, const char* name, struct smart
 		} else if (smatch(s, "Rotation Rate: Solid State") == 0) {
 			info[INFO_ROTATION_RATE] = 0;
 		} else if (sscanf(s, "Rotation Rate: %" SCNu64, &info[INFO_ROTATION_RATE]) == 1) {
-		} else if (snumber(s, "User Capacity:", &raw) == 0) {
+		} else if (snumber(s, "User Capacity:", &raw) == 1) {
 			info[INFO_SIZE] = raw;
 		} else if (sscanf(s, "Model Family: %63[^\n]", family) == 1) {
 			strtrim(family);

@@ -1985,7 +1985,9 @@ int smartctl_attribute(FILE* f, const char* file, const char* name, struct smart
 			strtrim(family);
 		} else if (sscanf(s, "Device Model: %63[^\n]", model) == 1) {
 			strtrim(model);
-		} else if (sscanf(s, "Serial number: %63s", serial) == 1) {
+		} else if (sscanf(s, "Serial number: %63s", serial) == 1) { /* SCSI */
+			strtrim(serial);
+		} else if (sscanf(s, "Serial Number: %63s", serial) == 1) { /*ATA / NVMe */
 			strtrim(serial);
 /* SCSI */
 /*

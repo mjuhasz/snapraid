@@ -2569,6 +2569,12 @@ static void devattr_property(HANDLE h, char* serial, char* model, char* inter)
 	}
 
 	if (serial && *serial == 0 && desc->SerialNumberOffset) {
+		/*
+		 * This is the RAW serial, maybe HEX encoded, maybe BYTES SWAPPED
+		 * but we don't care because we just need any identifier
+		 *
+		 * If smartctl was not able to read it, we now accept anything
+		 */
 		snprintf(serial, SMART_MAX, "%s", (char*)(buffer + desc->SerialNumberOffset));
 		strtrim(serial);
 	}

@@ -229,6 +229,7 @@
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #include <DiskArbitration/DiskArbitration.h>
+#include <mach-o/dyld.h>
 #endif
 
 #if HAVE_IO_H

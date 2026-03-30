@@ -1573,8 +1573,16 @@ Encoding
 	redirect the console output to a file, the resulting file is always
 	in UTF-8 format.
 
+Exit Code
+	SnapRAID terminates with the following error codes:
+
+	0 - Everything OK.
+	1 - The command encountered some errors.
+	2 - The `diff` command found everything is OK, but a `sync` is
+		needed.
+
 Copyright
-	This file is Copyright (C) 2025 Andrea Mazzoleni
+	This file is Copyright (C) 2026 Andrea Mazzoleni
 
 See Also
 	snapraid_log(1), snapraidd(1), rsync(1)

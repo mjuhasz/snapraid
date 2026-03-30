@@ -2030,7 +2030,23 @@ a TrueType font like \`Lucida Console\` as the console font.
 This affects only the printed file names; if you
 redirect the console output to a file, the resulting file is always
 in UTF\-8 format.
+.SH EXIT CODE 
+SnapRAID terminates with the following error codes:
+.RS 0
+.PD 0
+.HP 4
+.I 0
+Everything OK.
+.HP 4
+.I 1
+The command encountered some errors.
+.HP 4
+.I 2
+The \`diff\` command found everything is OK, but a \`sync\` is
+needed.
+.PD
+.RE
 .SH COPYRIGHT 
-This file is Copyright (C) 2025 Andrea Mazzoleni
+This file is Copyright (C) 2026 Andrea Mazzoleni
 .SH SEE ALSO 
 snapraid_log(1), snapraidd(1), rsync(1)

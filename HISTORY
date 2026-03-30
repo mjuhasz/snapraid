@@ -1,43 +1,23 @@
 SnapRAID HISTORY
 ================
 
-14.0rc3e 22/03/2026
-===================
- * Fixed reading of serial number in Windows
-
-14.0rc3d 22/03/2026
-===================
- * Fixed data race on the new RELOCATED flag
-
-14.0rc3c 16/03/2026
-===================
- * Log additional information to allow to handle dynamic devices associations
-
-14.0rc3 15/03/2026
-==================
+14.0 2026/03
+============
+ * More log tags for all commands in preparation for the upcoming SnapRAID
+   Daemon. Pre-release will be available at https://github.com/amadvance/snapraid-daemon.
+   Note that this is the minimal SnapRAID version required to use the daemon.
  * New 'extra' config option to define additional disks to monitor with the
    'probe' and 'smart' commands. This replaces the previous autodetection.
  * Introduced the 'relocated' file state to unify the previous 'copied/removed'
    logic. This new status specifically identifies files moved to a different
    path or disk with a new inode where the original has disappeared.
- * Removed the UAC request for Windows executable.
-
-14.0rc2 08/03/2026
-==================
- * Extended Windows support to be on par with the Linux version.
-
-14.0rc1 01/03/2026
-==================
- * More log tags for all commands in preparation for the upcoming SnapRAID
-   Daemon. Pre-release will be available at https://github.com/amadvance/snapraid-daemon.
-   Note that this is the minimal SnapRAID version required to use the daemon.
- * Fixed a crash on macOS when filesystem doesn't report UUID
  * Added support for local exclusion rules via .snapraidignore files placed
    directly within the array directory tree. This allows for granular,
    directory-level control over which files and folders are excluded from
    parity, mirroring the workflow of .gitignore.
  * Added support for the ** globbing character to allow recursive pattern
    matching across multiple directory levels.
+ * Fixed a crash on macOS when filesystem doesn't report UUID
  * Added a new locate command to map physical file offsets within the
    parity volume. This feature facilitates diagnostic analysis of the parity
    distribution. It supports the -t, --tail option to filter files located

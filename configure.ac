@@ -49,7 +49,7 @@ AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([fcntl.h stddef.h stdint.h stdlib.h string.h limits.h time.h sys/time.h])
 AC_CHECK_HEADERS([unistd.h getopt.h io.h inttypes.h byteswap.h])
 AC_CHECK_HEADERS([pthread.h math.h])
-AC_CHECK_HEADERS([sys/file.h sys/ioctl.h sys/sysmacros.h sys/mkdev.h])
+AC_CHECK_HEADERS([sys/file.h sys/ioctl.h sys/sysmacros.h sys/mkdev.h sys/mount.h])
 AC_CHECK_HEADERS([linux/fiemap.h linux/fs.h mach/mach_time.h execinfo.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.

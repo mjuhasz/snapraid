@@ -278,19 +278,35 @@ static wchar_t* u8tou16(wchar_t* conv_buf, const char* src)
 /**
  * Convert a generic string from UTF16 to UTF8.
  */
-static char* u16tou8ex(char* conv_buf, const wchar_t* src, size_t number_of_wchar, size_t* result_length_without_terminator)
+static char* u16tou8ex_may_fail(char* conv_buf, const wchar_t* src, size_t number_of_wchar, size_t* result_length_without_terminator)
 {
 	int ret;
 
 	ret = WideCharToMultiByte(CP_UTF8, 0, src, number_of_wchar, conv_buf, CONV_MAX, 0, 0);
-	if (ret <= 0) {
-		log_fatal(EINTERNAL, "Error converting from UTF-16 to UTF-8\n");
-		exit(EXIT_FAILURE);
-	}
+	if (ret <= 0)
+		return 0;
 
 	*result_length_without_terminator = ret;
 
 	return conv_buf;
+}
+
+static char* u16tou8ex(char* conv_buf, const wchar_t* src, size_t number_of_wchar, size_t* result_length_without_terminator)
+{
+	char* ret = u16tou8ex_may_fail(conv_buf, src, number_of_wchar, result_length_without_terminator);
+
+	if (!ret) {
+		log_fatal(EINTERNAL, "Error converting from UTF-16 to UTF-8 pointer %p with len %u\n", src, (unsigned)number_of_wchar);
+		if (src != 0) {
+			for (size_t i = 0; i < number_of_wchar; ++i) {
+				log_fatal(EINTERNAL, "%4u: %04x\n", (unsigned)i, src[i]);
+			}
+		}
+
+		os_abort();
+	}
+
+	return ret;
 }
 
 static char* u16tou8(char* conv_buf, const wchar_t* src)
@@ -1976,15 +1992,16 @@ int fsinfo(const char* path, int* has_persistent_inode, int* has_syncronized_har
 			if (GetVolumeInformationW(volume_root, vol_name, MAX_PATH, 0, 0, 0, fs_name, MAX_PATH)) {
 				char u8[CONV_MAX];
 				size_t len;
+				char* ret;
 
-				u16tou8ex(u8, fs_name, wcslen(fs_name), &len);
-				if (len + 1 <= fstype_size) {
+				ret = u16tou8ex_may_fail(u8, fs_name, wcslen(fs_name), &len);
+				if (ret != 0 && len + 1 <= fstype_size) {
 					memcpy(fstype, u8, len);
 					fstype[len] = 0;
 				}
 
-				u16tou8ex(u8, vol_name, wcslen(vol_name), &len);
-				if (len + 1 <= fslabel_size) {
+				ret = u16tou8ex_may_fail(u8, vol_name, wcslen(vol_name), &len);
+				if (ret != 0 && len + 1 <= fslabel_size) {
 					memcpy(fslabel, u8, len);
 					fslabel[len] = 0;
 				}

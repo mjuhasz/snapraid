@@ -169,7 +169,50 @@ const char* filter_type(struct snapraid_filter* filter, char* out, size_t out_si
 }
 
 /**
- * Apply a filter to the specified path
+ * Match a filter pattern against a path.
+ *
+ * @param filter The filter to apply.
+ * @param path The path to match against (already adjusted for local filter root).
+ * @param is_dir If the path refers to a directory, otherwise to a file.
+ * @return != 0 if matched, 0 if not matched.
+ */
+static int filter_match(struct snapraid_filter* filter, const char* path, int is_dir)
+{
+	/* match dirs with dirs and files with files */
+	if (filter->is_dir && !is_dir)
+		return 0;
+	if (!filter->is_dir && is_dir)
+		return 0;
+
+	if (filter->is_abs) {
+		/* skip initial slash, as always missing in the path */
+		if (wnmatch(filter->pattern + 1, path) == 0)
+			return 1;
+	} else {
+		/* the path is relative, first try to match from the root */
+		if (wnmatch(filter->pattern, path) == 0) {
+			return 1;
+		} else {
+			/* then try to match after all the / presents */
+			char* slash = strchr(path, '/');
+			while (slash) {
+				if (wnmatch(filter->pattern, slash + 1) == 0)
+					return 1;
+
+				slash = strchr(slash + 1, '/');
+			}
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Apply a filter to the specified path.
+ *
+ * For directory filters, this also checks if any parent directory
+ * in the path matches, so that a rule like "include /Movies/" will
+ * also include files inside the /Movies/ directory.
  *
  * @param filter The filter to apply.
  * @param reason Assign to it the filter that caused rejection.
@@ -186,40 +229,39 @@ static int filter_apply(struct snapraid_filter* filter, struct snapraid_filter**
 		path += strlen(filter->root);
 	}
 
-	/* match dirs with dirs and files with files */
-	if (filter->is_dir && !is_dir)
-		return 0;
-	if (!filter->is_dir && is_dir)
-		return 0;
+	/* first try to match directly */
+	if (filter_match(filter, path, is_dir)) {
+		if (reason != 0 && filter->direction < 0)
+			*reason = filter;
+		return filter->direction;
+	}
 
-	int ret = 0;
+	/* for directory filters, also check if any parent directory in the path matches */
+	/* this ensures that "include /Movies/" also includes files inside /Movies/ */
+	if (filter->is_dir) {
+		char buf[PATH_MAX];
+		unsigned i;
 
-	if (filter->is_abs) {
-		/* skip initial slash, as always missing in the path */
-		if (wnmatch(filter->pattern + 1, path) == 0)
-			ret = filter->direction;
-	} else {
-		/* the path is relative, first try to match from the root */
-		if (wnmatch(filter->pattern, path) == 0) {
-			ret = filter->direction;
-		} else {
-			/* then try to match after all the / presents */
-			char* slash = strchr(path, '/');
-			while (slash) {
-				if (wnmatch(filter->pattern, slash + 1) == 0) {
-					ret = filter->direction;
-					break;
+		pathcpy(buf, sizeof(buf), path);
+
+		for (i = 0; buf[i] != 0; ++i) {
+			if (buf[i] == '/') {
+				/* terminate at the slash to get the directory path */
+				buf[i] = 0;
+
+				if (filter_match(filter, buf, 1)) {
+					if (reason != 0 && filter->direction < 0)
+						*reason = filter;
+					return filter->direction;
 				}
 
-				slash = strchr(slash + 1, '/');
+				/* restore the slash */
+				buf[i] = '/';
 			}
 		}
 	}
 
-	if (reason != 0 && ret < 0)
-		*reason = filter;
-
-	return ret;
+	return 0;
 }
 
 /**

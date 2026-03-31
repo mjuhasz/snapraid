@@ -523,14 +523,24 @@ void thread_yield(void);
 /*
  * Wild match function.
  *
+ * If match_sub is !=0, it matches sub directory. Specifically it matches if the
+ * string "t" is not fully consumed and the next character to consume is a /.
+ *
  * - ? matches any single character except /
  * - * matches any sequence of characters except /
  * - ** (nearby a /) matches everything including /
  * - ** (not near a /) like *
- * - ##/ reduces to nothing in addition to the normal matching of ** (using # instead of * to mess the C comment)
+ * - ##/ reduces to nothing in addition to the normal matching of ** (using # instead of * to not mess the C comment)
  * - [...] matches character classes with support for ranges and negation lile [!...] or [^...], except /
+ *
+ * \return 0 if it matches
  */
-int wnmatch(const char* p, const char* t);
+int wnmatch_sub(const char* p, const char* t, int match_sub);
+
+static inline int wnmatch(const char* p, const char* t)
+{
+	return wnmatch_sub(p, t, 0);
+}
 
 #endif
 

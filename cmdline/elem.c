@@ -186,27 +186,35 @@ static int filter_apply(struct snapraid_filter* filter, struct snapraid_filter**
 		path += strlen(filter->root);
 	}
 
-	/* match dirs with dirs and files with files */
-	if (filter->is_dir && !is_dir)
-		return 0;
+	/* if the filter is for files, it doesn't applies to directories */
 	if (!filter->is_dir && is_dir)
 		return 0;
+
+	/*
+	 * If the filter is for directories, it should be applied to all files inside
+	 * that directory.
+	 *
+	 * This is done allowing a partial matching as far it ends at a directory separator
+	 */
+	int match_sub = 0;
+	if (filter->is_dir && !is_dir)
+		match_sub = 1;
 
 	int ret = 0;
 
 	if (filter->is_abs) {
 		/* skip initial slash, as always missing in the path */
-		if (wnmatch(filter->pattern + 1, path) == 0)
+		if (wnmatch_sub(filter->pattern + 1, path, match_sub) == 0)
 			ret = filter->direction;
 	} else {
 		/* the path is relative, first try to match from the root */
-		if (wnmatch(filter->pattern, path) == 0) {
+		if (wnmatch_sub(filter->pattern, path, match_sub) == 0) {
 			ret = filter->direction;
 		} else {
 			/* then try to match after all the / presents */
 			char* slash = strchr(path, '/');
 			while (slash) {
-				if (wnmatch(filter->pattern, slash + 1) == 0) {
+				if (wnmatch_sub(filter->pattern, slash + 1, match_sub) == 0) {
 					ret = filter->direction;
 					break;
 				}

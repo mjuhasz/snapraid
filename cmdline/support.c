@@ -2541,7 +2541,7 @@ static const char* match_class(const char* p, char t)
 	return p;
 }
 
-int wnmatch(const char* p, const char* t)
+int wnmatch_sub(const char* p, const char* t, int match_sub)
 {
 	char p1 = 0; /* previous char */
 	while (*p) {
@@ -2582,20 +2582,20 @@ int wnmatch(const char* p, const char* t)
 					 */
 					if (*p == '/' && (p1 == 0 || p1 == '/')) {
 						/* try reducing to nothing */
-						if (wnmatch(p + 1, t) == 0)
+						if (wnmatch_sub(p + 1, t, match_sub) == 0)
 							return 0;
 						/* otherwise / should match in the text */
 					}
 
 					/* try matching with 0 or more characters */
 					while (*t) {
-						if (wnmatch(p, t) == 0)
+						if (wnmatch_sub(p, t, match_sub) == 0)
 							return 0;
 						++t;
 					}
 
 					/* try matching at the end */
-					return wnmatch(p, t);
+					return wnmatch_sub(p, t, match_sub);
 				}
 			} else {
 				/* skip the * */
@@ -2611,13 +2611,13 @@ int wnmatch(const char* p, const char* t)
 
 			/* try matching with 0 or more characters */
 			while (*t && *t != '/') {
-				if (wnmatch(p, t) == 0)
+				if (wnmatch_sub(p, t, match_sub) == 0)
 					return 0;
 				++t;
 			}
 
 			/* try matching at the end */
-			return wnmatch(p, t);
+			return wnmatch_sub(p, t, match_sub);
 		case '[' :
 			/* character class */
 			if (*t == 0 || *t == '/')
@@ -2640,7 +2640,13 @@ int wnmatch(const char* p, const char* t)
 		p1 = p0;
 	}
 
-	/* match successful if we've consumed all text */
-	return *t != 0;
+	/* if we match sub directory */
+	if (match_sub) {
+		/* match successfully only if we are at a directory border */
+		return *t != '/';
+	} else {
+		/* match successfully if we've consumed all text */
+		return *t != 0;
+	}
 }
 
